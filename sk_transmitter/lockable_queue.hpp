@@ -22,6 +22,9 @@ namespace sk_transmitter {
         lockable_queue() = default;
 
         sk_transmitter::internal_msg atomic_get_and_pop() {  // TODO: If queue is empty, sleep and retry
+            while(q.empty())
+                ;
+
             std::lock_guard<std::mutex> lock(mut);
 
             auto ret = q.front();
