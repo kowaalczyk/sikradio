@@ -86,6 +86,10 @@ namespace sk_transmitter {
             }
 
         }
+
+        ~sk_socket() {
+            close_connection();
+        }
     };
 }
 

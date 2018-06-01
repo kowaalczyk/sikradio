@@ -1,5 +1,6 @@
 #include <iostream>
 #include <thread>
+#include <future>
 #include "sk_transmitter/internal_msg.hpp"
 #include "sk_transmitter/types.hpp"
 #include "sk_transmitter/lockable_queue.hpp"
@@ -9,11 +10,11 @@
 
 
 // TODO: This should be set based on cmd line args
-size_t PSIZE = 0;
-size_t FSIZE = 0;
+size_t PSIZE = 512;
+size_t FSIZE = 65536;
 size_t RTIME = 0;
-std::string test_broadcast_ip = "255.255.255.255";
-uint16_t test_broadcast_port = 40000;
+std::string MCAST_ADDR = "255.255.255.255";
+uint16_t DATA_PORT = 40000;
 
 
 sk_transmitter::lockable_queue awaiting_msgs;
@@ -31,8 +32,8 @@ namespace sk_workers {
     }
 
 
-    void retransmit() {
-        while (true) {  // TODO: Stop condition
+    void retransmit(std::shared_future<void> sending_completed) {
+        while (sending_completed.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
             sk_transmitter::msg_id_t id;  // TODO: Read from socket
 
             sk_transmitter::internal_msg msg = sent_msgs.atomic_get(id);
@@ -45,19 +46,19 @@ namespace sk_workers {
     }
 
 
-    void listen() {
-        while (true) {  // TODO: Stop condition
+    void listen(std::shared_future<void> sending_completed) {
+        while (sending_completed.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
             // TODO
         }
     }
 
 
-    void send() {
+    void send(std::shared_future<void> sending_completed) {
         sk_transmitter::msg_id_t session_id;  // TODO: Initialize as specified
-        sk_transmitter::sk_socket sock{test_broadcast_ip, static_cast<in_port_t>(test_broadcast_port)};
+        sk_transmitter::sk_socket sock{MCAST_ADDR, static_cast<in_port_t>(DATA_PORT)};
 
-        while (true) {  // TODO: Stop condition
-            sk_transmitter::internal_msg msg = awaiting_msgs.atomic_get_and_pop();
+        while (sending_completed.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
+            sk_transmitter::internal_msg msg = awaiting_msgs.atomic_get_and_pop();  // TODO: Prevent deadlock here (when sending_completed but atomic_get waiting)
 
             sock.send(msg.sendable_with_session_id(session_id));
 
@@ -65,6 +66,7 @@ namespace sk_workers {
                 sent_msgs.atomic_push(msg);
             }
         }
+
     }
 
 }
@@ -72,9 +74,20 @@ namespace sk_workers {
 int main() {
     // TODO: Parse command line args
 
-    std::thread sender(sk_workers::send);
-    std::thread listener(sk_workers::listen);
-    std::thread retransmitter(sk_workers::retransmit);
+    std::promise<void> sending_completed;
+    std::shared_future<void> sc_future(sending_completed.get_future());
+
+    std::thread sender(sk_workers::send, sc_future);
+    std::thread listener(sk_workers::listen, sc_future);
+    std::thread retransmitter(sk_workers::retransmit, sc_future);
     std::thread transmitter(sk_workers::transmit);
+
+    transmitter.join();
+    sending_completed.set_value();
+
+    listener.join();
+    retransmitter.join();
+    sender.join();
+
     return 0;
 }
