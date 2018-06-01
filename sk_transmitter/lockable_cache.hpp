@@ -1,0 +1,50 @@
+//
+// Created by kowal on 01.06.18.
+//
+
+#ifndef SIK_NADAJNIK_LOCKABLE_CACHE_HPP
+#define SIK_NADAJNIK_LOCKABLE_CACHE_HPP
+
+
+#include <vector>
+#include <mutex>
+#include "internal_msg.hpp"
+#include "exceptions.hpp"
+
+namespace sk_transmitter {
+    class lockable_cache {
+    private:
+        std::mutex mut{};
+        std::vector<sk_transmitter::internal_msg> container{};
+        size_t container_size;
+
+        size_t internal_id(msg_id_t id) {
+            return (id % container_size);
+        }
+
+    public:
+        explicit lockable_cache(size_t container_size) : container_size(container_size) {
+            container.reserve(container_size);
+        }
+
+        sk_transmitter::internal_msg atomic_get(sk_transmitter::msg_id_t id) {
+            std::lock_guard<std::mutex> lock(mut);
+            auto ret = container[internal_id(id)];
+            ret.initial = false;  // never accept this message again
+            return ret;
+        }
+
+        void atomic_push(sk_transmitter::internal_msg &msg) {
+            if (!msg.initial) {
+                throw lockable_cache_insert_exception("Cannot atomic_push a non-initial message into cache");
+            }
+
+            std::lock_guard<std::mutex> lock(mut);
+
+            container[internal_id(msg.id)] = msg;
+        }
+    };
+}
+
+
+#endif //SIK_NADAJNIK_LOCKABLE_CACHE_HPP
