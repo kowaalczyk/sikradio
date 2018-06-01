@@ -34,14 +34,14 @@ namespace sk_transmitter {
             return ret;
         }
 
-        void atomic_push(sk_transmitter::internal_msg &msg) {
+        void atomic_push(sk_transmitter::internal_msg msg) {
             if (!msg.initial) {
                 throw lockable_cache_insert_exception("Cannot atomic_push a non-initial message into cache");
             }
 
             std::lock_guard<std::mutex> lock(mut);
 
-            container[internal_id(msg.id)] = msg;
+            container[internal_id(msg.id)] = std::move(msg);
         }
     };
 }

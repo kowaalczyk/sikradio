@@ -55,12 +55,6 @@ namespace sk_transmitter {
             connected = true;
         }
 
-        void close_connection() {
-            if (!connected) return;
-
-            close(sock);
-        }
-
         void reconnect_and_send(sk_transmitter::msg_t sendable_msg, size_t msg_len) {
             close_connection();
             open_connection();
@@ -85,6 +79,12 @@ namespace sk_transmitter {
                 }
             }
 
+        }
+
+        void close_connection() {
+            if (!connected) return;
+
+            close(sock);
         }
 
         ~sk_socket() {

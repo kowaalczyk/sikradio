@@ -59,7 +59,6 @@ namespace sk_workers {
 
         while (sending_completed.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
             sk_transmitter::internal_msg msg = awaiting_msgs.atomic_get_and_pop();  // TODO: Prevent deadlock here (when sending_completed but atomic_get waiting)
-
             sock.send(msg.sendable_with_session_id(session_id));
 
             if (msg.initial) {

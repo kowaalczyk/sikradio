@@ -32,9 +32,9 @@ namespace sk_transmitter {
             return ret;
         }
 
-        void atomic_push(sk_transmitter::internal_msg &msg) {
+        void atomic_push(sk_transmitter::internal_msg msg) {
             std::lock_guard<std::mutex> lock(mut);
-            q.push(msg);
+            q.push(std::move(msg));
         }
     };
 }
