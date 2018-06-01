@@ -21,7 +21,7 @@ namespace sk_transmitter {
     public:
         lockable_queue() = default;
 
-        sk_transmitter::internal_msg atomic_get_and_pop() {  // TODO: If queue is empty, sleep and retry
+        sk_transmitter::internal_msg atomic_get_and_pop() {
             while(q.empty())
                 ;
 

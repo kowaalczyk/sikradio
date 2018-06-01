@@ -6,7 +6,6 @@
 #include "sk_transmitter/lockable_queue.hpp"
 #include "sk_transmitter/lockable_cache.hpp"
 #include "sk_transmitter/sk_socket.hpp"
-//#include "sk_transmitter/sk_socket.hpp"
 
 
 // TODO: This should be set based on cmd line args
