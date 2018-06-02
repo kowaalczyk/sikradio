@@ -17,7 +17,7 @@ namespace sk_transmitter {
         uint64_t htonll(uint64_t value) {
             static const int num = 2137;
 
-            if (*reinterpret_cast<const byte_t*>(&num) == num) {
+            if (*reinterpret_cast<const byte_t *>(&num) == num) {
                 const uint32_t high_part = htonl(static_cast<uint32_t>(value >> 32));
                 const uint32_t low_part = htonl(static_cast<uint32_t>(value & 0xFFFFFFFFLL));
 
@@ -35,8 +35,9 @@ namespace sk_transmitter {
         internal_msg(msg_id_t id, msg_t data) : id{id},
                                                 data{std::move(data)} {}
 
-        internal_msg(bool initial, msg_t data) : initial{initial},
-                                                 data{std::move(data)} {}
+        internal_msg(bool initial, msg_id_t id, msg_t data) : initial{initial},
+                                                              id{id},
+                                                              data{std::move(data)} {}
 
         msg_t sendable_with_session_id(msg_id_t session_id) {
             byte_t msg[data.size() + 2 * sizeof(uint64_t)];
@@ -46,7 +47,7 @@ namespace sk_transmitter {
 
             memcpy(msg, reinterpret_cast<const void *>(&net_session_id), sizeof(uint64_t));
             memcpy(msg + sizeof(uint64_t), reinterpret_cast<const void *>(&net_id), sizeof(uint64_t));
-            memcpy(msg + 2*sizeof(uint64_t), data.data(), data.size());
+            memcpy(msg + 2 * sizeof(uint64_t), data.data(), data.size());
 
             msg_t ret;
             ret.assign(msg, msg + sizeof(msg));

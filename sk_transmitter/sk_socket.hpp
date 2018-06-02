@@ -16,7 +16,7 @@
 #include "internal_msg.hpp"
 #include "exceptions.hpp"
 
-#define TTL_VALUE     4  // TODO: Make sure this value is correct (copied from lab example)
+#define TTL_VALUE     64
 
 
 namespace sk_transmitter {
@@ -28,7 +28,7 @@ namespace sk_transmitter {
         bool connected{false};
         int sock{-1};
 
-        void open_connection() {  // TODO: Make sure connection parameters are correct (copied from lab example)
+        void open_connection() {
             if (connected) return;
 
             sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -66,14 +66,14 @@ namespace sk_transmitter {
         sk_socket(std::string remote_dotted_address, in_port_t remote_port) : remote_dotted_address(std::move(
                 remote_dotted_address)), remote_port(remote_port) {}
 
-        void send(sk_transmitter::msg_t sendable_msg) {  // TODO: Make sure this is NON-BLOCKING !!!
+        void send(sk_transmitter::msg_t sendable_msg) {
             if (!connected) open_connection();
 
             auto msg_len = sendable_msg.size();
             auto sent_len = write(sock, sendable_msg.data(), msg_len);
             if (sent_len != msg_len) {
                 switch (errno) {
-                    // TODO: handle common errors with #reconnect_and_send
+                     // TODO: handle common errors with #reconnect_and_send
                     default:
                         throw sk_transmitter::sk_socket_send_exception(strerror(errno));
                 }

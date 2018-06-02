@@ -11,7 +11,7 @@
 
 namespace sk_transmitter {
     typedef uint64_t msg_id_t;
-    typedef unsigned char byte_t;
+    typedef char byte_t;
     typedef std::vector<byte_t> msg_t;
 }
 

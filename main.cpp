@@ -15,24 +15,29 @@ size_t RTIME = 0;
 std::string MCAST_ADDR = "255.255.255.255";
 uint16_t DATA_PORT = 40000;
 
+const size_t sent_msgs_cache_size = 1 + ((FSIZE - 1) / PSIZE);  // FSIZE and PSIZE > 0
 
 sk_transmitter::lockable_queue awaiting_msgs;
-sk_transmitter::lockable_cache sent_msgs(FSIZE);
+sk_transmitter::lockable_cache sent_msgs(sent_msgs_cache_size);
 
 namespace sk_workers {
     void transmit() {
-        sk_transmitter::msg_t buf(PSIZE);  // TODO: Set appropriate size of read chunk
+        sk_transmitter::msg_t buf(PSIZE);
+        sk_transmitter::msg_id_t current_msg_id = 0;
 
         while (!std::cin.eof()) {
             std::cin.read(reinterpret_cast<char *>(buf.data()), buf.size());  // or `&buf[0]` on older platforms
-            sk_transmitter::internal_msg msg(true, buf);
-            awaiting_msgs.atomic_push(msg);
+            sk_transmitter::internal_msg msg(true, current_msg_id, buf);
+            current_msg_id++;
+
+            awaiting_msgs.atomic_push(msg); // TODO: Make sure last chunk will be omitted
         }
     }
 
 
     void retransmit(std::shared_future<void> sending_completed) {
         while (sending_completed.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
+            auto wake_up_time = std::chrono::system_clock::now().time_since_epoch();
             sk_transmitter::msg_id_t id;  // TODO: Read from socket
 
             sk_transmitter::internal_msg msg = sent_msgs.atomic_get(id);
@@ -40,7 +45,10 @@ namespace sk_workers {
                 awaiting_msgs.atomic_push(msg);
             }
 
-            // TODO: Sleep EXACTLY 250 milis
+            // Sleep EXACTLY 250 milis
+            auto time_diff = std::chrono::system_clock::now().time_since_epoch() - wake_up_time;
+            std::this_thread::sleep_for(std::chrono::milliseconds(250)-time_diff);
+            // TODO: Send this to another socket opened on same port
         }
     }
 
@@ -53,18 +61,19 @@ namespace sk_workers {
 
 
     void send(std::shared_future<void> sending_completed) {
-        sk_transmitter::msg_id_t session_id;  // TODO: Initialize as specified
+        sk_transmitter::msg_id_t session_id = 1;  // TODO: Initialize as specified
         sk_transmitter::sk_socket sock{MCAST_ADDR, static_cast<in_port_t>(DATA_PORT)};
 
         while (sending_completed.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
-            sk_transmitter::internal_msg msg = awaiting_msgs.atomic_get_and_pop();  // TODO: Prevent deadlock here (when sending_completed but atomic_get waiting)
+            // even though this is blocking, deadlock is impossible: setting sending_completed flag means there is something in the queue.
+            sk_transmitter::internal_msg msg = awaiting_msgs.atomic_get_and_pop();
+
             sock.send(msg.sendable_with_session_id(session_id));
 
             if (msg.initial) {
                 sent_msgs.atomic_push(msg);
             }
         }
-
     }
 
 }

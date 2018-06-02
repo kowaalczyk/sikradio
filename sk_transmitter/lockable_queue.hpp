@@ -21,7 +21,7 @@ namespace sk_transmitter {
     public:
         lockable_queue() = default;
 
-        sk_transmitter::internal_msg atomic_get_and_pop() {
+        sk_transmitter::internal_msg atomic_get_and_pop() {  // TODO: To avoid deadlock when input ends, make this an optional return and check for shared future to complete (then return null)
             while(q.empty())
                 ;
 
