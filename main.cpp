@@ -7,6 +7,8 @@
 #include "sk_transmitter/lockable_cache.hpp"
 #include "sk_transmitter/sk_socket.hpp"
 
+using nonstd::optional;  // TODO: Change in deployment
+
 
 // TODO: This should be set based on cmd line args
 size_t PSIZE = 512;
@@ -40,9 +42,11 @@ namespace sk_workers {
             auto wake_up_time = std::chrono::system_clock::now().time_since_epoch();
             sk_transmitter::msg_id_t id;  // TODO: Read from socket
 
-            sk_transmitter::internal_msg msg = sent_msgs.atomic_get(id);
-            if (msg.id == id) {  // message with desired id was still stored in cache
-                awaiting_msgs.atomic_push(msg);
+            optional<sk_transmitter::internal_msg> msg = sent_msgs.atomic_get(id);
+            if (msg.has_value()) {
+                if (msg.value().id == id) {  // message with desired id was still stored in cache
+                    awaiting_msgs.atomic_push(msg.value());
+                }
             }
 
             // Sleep EXACTLY 250 milis
@@ -66,12 +70,13 @@ namespace sk_workers {
 
         while (sending_completed.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
             // even though this is blocking, deadlock is impossible: setting sending_completed flag means there is something in the queue.
-            sk_transmitter::internal_msg msg = awaiting_msgs.atomic_get_and_pop();
+            optional<sk_transmitter::internal_msg> msg = awaiting_msgs.atomic_get_and_pop();
+            if (msg.has_value()) {
+                sock.send(msg.value().sendable_with_session_id(session_id));
 
-            sock.send(msg.sendable_with_session_id(session_id));
-
-            if (msg.initial) {
-                sent_msgs.atomic_push(msg);
+                if (msg.value().initial) {
+                    sent_msgs.atomic_push(msg.value());
+                }
             }
         }
     }

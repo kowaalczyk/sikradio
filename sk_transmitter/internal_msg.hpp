@@ -11,6 +11,7 @@
 #include <cstring>
 #include "types.hpp"
 
+
 namespace sk_transmitter {
     class internal_msg {
     private:

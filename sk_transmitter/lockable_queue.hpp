@@ -10,6 +10,11 @@
 #include <queue>
 #include <atomic>
 #include "internal_msg.hpp"
+#include "../lib/optional.hpp"
+
+
+using nonstd::optional;  // TODO: Change in deployment
+using nonstd::nullopt;  // TODO: Change in deployment
 
 
 namespace sk_transmitter {
@@ -21,15 +26,14 @@ namespace sk_transmitter {
     public:
         lockable_queue() = default;
 
-        sk_transmitter::internal_msg atomic_get_and_pop() {  // TODO: To avoid deadlock when input ends, make this an optional return and check for shared future to complete (then return null)
-            while(q.empty())
-                ;
+        optional<sk_transmitter::internal_msg> atomic_get_and_pop() {
+            if (q.empty()) return nullopt;
 
             std::lock_guard<std::mutex> lock(mut);
 
             auto ret = q.front();
             q.pop();
-            return ret;
+            return optional<sk_transmitter::internal_msg>(ret);
         }
 
         void atomic_push(sk_transmitter::internal_msg msg) {

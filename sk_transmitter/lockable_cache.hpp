@@ -10,6 +10,12 @@
 #include <mutex>
 #include "internal_msg.hpp"
 #include "exceptions.hpp"
+#include "../lib/optional.hpp"
+
+
+using nonstd::optional;  // TODO: Change in deployment
+using nonstd::nullopt;  // TODO: Change in deployment
+
 
 namespace sk_transmitter {
     class lockable_cache {
@@ -27,11 +33,14 @@ namespace sk_transmitter {
             container.reserve(container_size);
         }
 
-        sk_transmitter::internal_msg atomic_get(sk_transmitter::msg_id_t id) {
+        optional<sk_transmitter::internal_msg> atomic_get(sk_transmitter::msg_id_t id) {
+            if (id >= container.size()) return nullopt;
+
             std::lock_guard<std::mutex> lock(mut);
+
             auto ret = container[internal_id(id)];
             ret.initial = false;  // never accept this message again
-            return ret;
+            return optional<sk_transmitter::internal_msg>(ret);
         }
 
         void atomic_push(sk_transmitter::internal_msg msg) {
