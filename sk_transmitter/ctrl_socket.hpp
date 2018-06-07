@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <zconf.h>
+#include <iostream>
 #include "exceptions.hpp"
 #include "../lib/optional.hpp"
 #include "ctrl_msg.hpp"
@@ -45,10 +46,10 @@ namespace sk_transmitter {
             int err = setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
             if (err < 0) throw sk_transmitter::exceptions::socket_exception(strerror(errno));
 
-            // set timeout to 1 millisecond to prevent deadlocks (possible with optional returns)
+            // set timeout to 1 second to prevent deadlocks (possible with optional returns)
             struct timeval tv{
-                    .tv_sec = 0,
-                    .tv_usec = 1000
+                    .tv_sec = 1,
+                    .tv_usec = 0
             };
             err = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
             if (err < 0) throw sk_transmitter::exceptions::socket_exception(strerror(errno));
@@ -83,12 +84,15 @@ namespace sk_transmitter {
                     throw sk_transmitter::exceptions::socket_exception(strerror(errno));
                 }
             }
-            return optional<sk_transmitter::ctrl_msg>(sk_transmitter::ctrl_msg(buffer, client_address));
+            std::string str_buffer(buffer, buffer+len);
+            return optional<sk_transmitter::ctrl_msg>(sk_transmitter::ctrl_msg(str_buffer, client_address));
         }
 
-        void respond(ctrl_msg request, const char *response, size_t response_len) { // TODO: Complete from here
+        void respond(const ctrl_msg &request, const char *response, size_t response_len) {
+            sockaddr_in addr = request.get_sender_address();
+
             ssize_t snd_len = sendto(sock, response, response_len, 0,
-                                     reinterpret_cast<const sockaddr *>(&request.get_sender_address()),
+                                     reinterpret_cast<const sockaddr *>(&addr),
                                      (socklen_t) sizeof(request.get_sender_address()));
             if (snd_len < 0) throw sk_transmitter::exceptions::socket_exception(strerror(errno));
             if (snd_len != response_len)

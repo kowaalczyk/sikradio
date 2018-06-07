@@ -49,6 +49,7 @@ namespace sk_workers {
         while (reading_complete.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
             optional<sk_transmitter::ctrl_msg> req  = sock.receive();
             if (req.has_value()) {
+
                 if (req.value().is_lookup()) {
                     // TODO: Fill response with correct data
                     sock.respond(req.value(), "", sizeof(""));
