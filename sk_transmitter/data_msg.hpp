@@ -13,7 +13,7 @@
 
 
 namespace sk_transmitter {
-    class internal_msg {
+    class data_msg {
     private:
         uint64_t htonll(uint64_t value) {
             static const int num = 2137;
@@ -29,16 +29,11 @@ namespace sk_transmitter {
         }
 
     public:
-        bool initial{false};
         sk_transmitter::msg_id_t id{};
         sk_transmitter::msg_t data{};
 
-        internal_msg(msg_id_t id, msg_t data) : id{id},
+        data_msg(msg_id_t id, msg_t data) : id{id},
                                                 data{std::move(data)} {}
-
-        internal_msg(bool initial, msg_id_t id, msg_t data) : initial{initial},
-                                                              id{id},
-                                                              data{std::move(data)} {}
 
         msg_t sendable_with_session_id(msg_id_t session_id) {
             byte_t msg[data.size() + 2 * sizeof(uint64_t)];

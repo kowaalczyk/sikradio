@@ -9,7 +9,7 @@
 #include <mutex>
 #include <queue>
 #include <atomic>
-#include "internal_msg.hpp"
+#include "data_msg.hpp"
 #include "../lib/optional.hpp"
 
 
@@ -21,22 +21,22 @@ namespace sk_transmitter {
     class lockable_queue {
     private:
         std::mutex mut{};
-        std::queue<sk_transmitter::internal_msg> q{};
+        std::queue<sk_transmitter::data_msg> q{};
 
     public:
         lockable_queue() = default;
 
-        optional<sk_transmitter::internal_msg> atomic_get_and_pop() {
+        optional<sk_transmitter::data_msg> atomic_get_and_pop() {
             if (q.empty()) return nullopt;
 
             std::lock_guard<std::mutex> lock(mut);
 
             auto ret = q.front();
             q.pop();
-            return optional<sk_transmitter::internal_msg>(ret);
+            return optional<sk_transmitter::data_msg>(ret);
         }
 
-        void atomic_push(sk_transmitter::internal_msg msg) {
+        void atomic_push(sk_transmitter::data_msg msg) {
             std::lock_guard<std::mutex> lock(mut);
             q.push(std::move(msg));
         }

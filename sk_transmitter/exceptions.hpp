@@ -9,29 +9,19 @@
 #include <string>
 
 namespace sk_transmitter {
-    class lockable_cache_insert_exception : public std::exception {
-    private:
-        const std::string msg_str;
+    namespace exceptions {
+        class socket_exception : public std::exception {
+        private:
+            const std::string msg_str;
 
-    public:
-        explicit lockable_cache_insert_exception(std::string msg_str) : msg_str(std::move(msg_str)) {}
+        public:
+            explicit socket_exception(std::string msg_str) : msg_str(std::move(msg_str)) {}
 
-        const char *what() const noexcept override {
-            return msg_str.c_str();
-        }
-    };
-
-    class sk_socket_send_exception : public std::exception {
-    private:
-        const std::string msg_str;
-
-    public:
-        explicit sk_socket_send_exception(std::string msg_str) : msg_str(std::move(msg_str)) {}
-
-        const char *what() const noexcept override {
-            return msg_str.c_str();
-        }
-    };
+            const char *what() const noexcept override {
+                return msg_str.c_str();
+            }
+        };
+    }
 }
 
 

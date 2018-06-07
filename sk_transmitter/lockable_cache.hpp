@@ -8,7 +8,7 @@
 
 #include <vector>
 #include <mutex>
-#include "internal_msg.hpp"
+#include "data_msg.hpp"
 #include "exceptions.hpp"
 #include "../lib/optional.hpp"
 
@@ -21,7 +21,7 @@ namespace sk_transmitter {
     class lockable_cache {
     private:
         std::mutex mut{};
-        std::vector<sk_transmitter::internal_msg> container{};
+        std::vector<sk_transmitter::data_msg> container{};
         size_t container_size;
 
         size_t internal_id(msg_id_t id) {
@@ -33,24 +33,19 @@ namespace sk_transmitter {
             container.reserve(container_size);
         }
 
-        optional<sk_transmitter::internal_msg> atomic_get(sk_transmitter::msg_id_t id) {
+        optional<sk_transmitter::data_msg> atomic_get(sk_transmitter::msg_id_t id) {
             if (id >= container.size()) return nullopt;
 
             std::lock_guard<std::mutex> lock(mut);
-
-            auto ret = container[internal_id(id)];
-            ret.initial = false;  // never accept this message again
-            return optional<sk_transmitter::internal_msg>(ret);
+            return optional<sk_transmitter::data_msg>(container[internal_id(id)]);
         }
 
-        void atomic_push(sk_transmitter::internal_msg msg) {
-            if (!msg.initial) {
-                throw lockable_cache_insert_exception("Cannot atomic_push a non-initial message into cache");
-            }
-
+        void atomic_push(sk_transmitter::data_msg msg) {
             std::lock_guard<std::mutex> lock(mut);
 
-            container[internal_id(msg.id)] = std::move(msg);
+            // just to prevent segfault when copying to uninitialized memory
+            if (internal_id(msg.id) == container.size()) container.push_back(msg);
+            container[internal_id(msg.id)] = msg;
         }
     };
 }
