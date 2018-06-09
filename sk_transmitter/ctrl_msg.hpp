@@ -14,14 +14,14 @@
 #include <zconf.h>
 #include <vector>
 #include "exceptions.hpp"
-#include "../lib/optional.hpp"
+#include <optional>
 #include "ctrl_msg.hpp"
 #include "types.hpp"
 #include <regex>
 
 
-using nonstd::optional;
-using nonstd::nullopt;
+using std::optional;
+using std::nullopt;
 
 
 namespace sk_transmitter {

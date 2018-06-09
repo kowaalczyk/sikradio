@@ -11,11 +11,11 @@
 #include <atomic>
 #include <set>
 #include "data_msg.hpp"
-#include "../lib/optional.hpp"
+#include <optional>
 
 
-using nonstd::optional;  // TODO: Change in deployment
-using nonstd::nullopt;  // TODO: Change in deployment
+using std::optional;
+using std::nullopt;
 
 
 namespace sk_transmitter {

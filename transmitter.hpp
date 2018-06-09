@@ -42,7 +42,7 @@ namespace sk_transmitter {
                 sk_transmitter::data_msg msg(current_msg_id, buf);
                 current_msg_id += PSIZE;
 
-                send_q.atomic_push(msg); // TODO: Make sure last chunk will be omitted
+                send_q.atomic_push(msg);
                 sent_msgs.atomic_push(msg);
             }
         }
@@ -65,7 +65,6 @@ namespace sk_transmitter {
 
                         while (true) {
                             try {
-                                // TODO: Fill response with correct data
                                 sock.respond(req.value(), lookup_response.c_str(), sizeof(lookup_response.c_str()));
                                 break;
                             } catch (sk_transmitter::exceptions::socket_exception &e) {

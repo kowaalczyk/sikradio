@@ -14,15 +14,15 @@
 #include <zconf.h>
 #include <iostream>
 #include "exceptions.hpp"
-#include "../lib/optional.hpp"
+#include <optional>
 #include "ctrl_msg.hpp"
 
 
 #define UDP_DATAGRAM_DATA_LEN_MAX 65535
 
 
-using nonstd::optional;
-using nonstd::nullopt;
+using std::optional;
+using std::nullopt;
 
 
 namespace sk_transmitter {
