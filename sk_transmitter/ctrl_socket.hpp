@@ -95,7 +95,7 @@ namespace sk_transmitter {
                                      reinterpret_cast<const sockaddr *>(&addr),
                                      (socklen_t) sizeof(request.get_sender_address()));
             if (snd_len < 0) throw sk_transmitter::exceptions::socket_exception(strerror(errno));
-            if (snd_len != response_len)
+            if (snd_len != static_cast<ssize_t>(response_len))
                 throw sk_transmitter::exceptions::socket_exception("Failed to send entire response");
         }
     };

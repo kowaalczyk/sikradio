@@ -27,12 +27,11 @@ namespace sk_transmitter {
         uint16_t CTRL_PORT = 35830;
         std::string NAME = "";
 
-        sk_transmitter::msg_id_t session_id;
         size_t sent_msgs_cache_size;
-
         sk_transmitter::lockable_queue send_q{};
         sk_transmitter::lockable_queue resend_q{};
         sk_transmitter::lockable_cache sent_msgs;
+        sk_transmitter::msg_id_t session_id;
 
         void read() {
             sk_transmitter::msg_t buf(PSIZE);

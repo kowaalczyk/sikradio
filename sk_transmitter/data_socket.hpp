@@ -59,7 +59,7 @@ namespace sk_transmitter {
             close_connection();
             open_connection();
             auto sent_len = write(sock, sendable_msg.data(), msg_len);
-            if (sent_len != msg_len) throw sk_transmitter::exceptions::socket_exception(strerror(errno));
+            if (sent_len != static_cast<ssize_t>(msg_len)) throw sk_transmitter::exceptions::socket_exception(strerror(errno));
         }
 
     public:
@@ -71,7 +71,7 @@ namespace sk_transmitter {
 
             auto msg_len = sendable_msg.size();
             auto sent_len = write(sock, sendable_msg.data(), msg_len);
-            if (sent_len != msg_len) throw sk_transmitter::exceptions::socket_exception(strerror(errno));
+            if (sent_len != static_cast<ssize_t>(msg_len)) throw sk_transmitter::exceptions::socket_exception(strerror(errno));
         }
 
         void close_connection() {
