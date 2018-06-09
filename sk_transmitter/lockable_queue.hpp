@@ -9,6 +9,7 @@
 #include <mutex>
 #include <queue>
 #include <atomic>
+#include <set>
 #include "data_msg.hpp"
 #include "../lib/optional.hpp"
 
@@ -34,6 +35,18 @@ namespace sk_transmitter {
             auto ret = q.front();
             q.pop();
             return optional<sk_transmitter::data_msg>(ret);
+        }
+
+        std::set<sk_transmitter::data_msg> atomic_get_unique() {
+            std::set<sk_transmitter::data_msg> ret;
+
+            std::lock_guard<std::mutex> lock(mut);
+
+            while(!q.empty()) {
+                ret.insert(q.front());
+                q.pop();
+            }
+            return ret;
         }
 
         void atomic_push(sk_transmitter::data_msg msg) {

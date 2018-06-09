@@ -71,14 +71,7 @@ namespace sk_transmitter {
 
             auto msg_len = sendable_msg.size();
             auto sent_len = write(sock, sendable_msg.data(), msg_len);
-            if (sent_len != msg_len) {
-                switch (errno) {
-                    // TODO: handle common errors with #reconnect_and_send
-                    default:
-                        throw sk_transmitter::exceptions::socket_exception(strerror(errno));
-                }
-            }
-
+            if (sent_len != msg_len) throw sk_transmitter::exceptions::socket_exception(strerror(errno));
         }
 
         void close_connection() {

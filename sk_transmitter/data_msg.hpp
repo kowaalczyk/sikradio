@@ -49,6 +49,22 @@ namespace sk_transmitter {
             ret.assign(msg, msg + sizeof(msg));
             return ret;
         }
+
+        bool operator<(const data_msg &rhs) const {
+            return id < rhs.id;
+        }
+
+        bool operator>(const data_msg &rhs) const {
+            return rhs < *this;
+        }
+
+        bool operator<=(const data_msg &rhs) const {
+            return !(rhs < *this);
+        }
+
+        bool operator>=(const data_msg &rhs) const {
+            return !(*this < rhs);
+        }
     };
 }
 

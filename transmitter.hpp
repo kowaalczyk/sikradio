@@ -56,8 +56,23 @@ namespace sk_transmitter {
                 if (req.has_value()) {
 
                     if (req.value().is_lookup()) {
-                        // TODO: Fill response with correct data
-                        sock.respond(req.value(), "", sizeof(""));
+                        std::string lookup_response = "BOREWICZ_HERE ";
+                        lookup_response += MCAST_ADDR;
+                        lookup_response += " ";
+                        lookup_response += std::to_string(DATA_PORT);
+                        lookup_response += " ";
+                        lookup_response += NAME;
+                        lookup_response += "\n";
+
+                        while (true) {
+                            try {
+                                // TODO: Fill response with correct data
+                                sock.respond(req.value(), lookup_response.c_str(), sizeof(lookup_response.c_str()));
+                                break;
+                            } catch (sk_transmitter::exceptions::socket_exception &e) {
+                                // retry
+                            }
+                        }
                     }
 
                     if (req.value().is_rexmit()) {
@@ -80,11 +95,16 @@ namespace sk_transmitter {
             sk_transmitter::data_socket sock{MCAST_ADDR, static_cast<in_port_t>(DATA_PORT)};
 
             while (reading_complete.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
-                optional<sk_transmitter::data_msg> msg = resend_q.atomic_get_and_pop();  // TODO: Atomic get all and make set to prevent double rexmits
-                while (msg.has_value()) {  // Send all messages from the queue
-                    sock.send(msg.value().sendable_with_session_id(session_id));
-
-                    msg = resend_q.atomic_get_and_pop();
+                std::set<sk_transmitter::data_msg> unique_msgs = resend_q.atomic_get_unique();  // Assuming we need to only retransmit each requested messag once
+                for (auto msg : unique_msgs) {
+                    while (true) {
+                        try {
+                            sock.send(msg.sendable_with_session_id(session_id));
+                            break;
+                        } catch (sk_transmitter::exceptions::socket_exception &e) {
+                            // retry
+                        }
+                    }
                 }
 
                 // Assuming RTIME is a time between retransmissions (not between beinnnings of consecutive retransmissions)
@@ -99,7 +119,14 @@ namespace sk_transmitter {
                 optional<sk_transmitter::data_msg> msg = send_q.atomic_get_and_pop();
 
                 if (msg.has_value()) {
-                    sock.send(msg.value().sendable_with_session_id(session_id));
+                    while (true) {
+                        try {
+                            sock.send(msg.value().sendable_with_session_id(session_id));
+                            break;
+                        } catch (sk_transmitter::exceptions::socket_exception &e) {
+                            // retry
+                        }
+                    }
                 }
             }
         }
