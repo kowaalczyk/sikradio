@@ -1,5 +1,9 @@
+# clion
 .idea
 cmake-build-*
+# data files
 bin
 mp3
+*.pdf
+# executables
 sikradio-sender
