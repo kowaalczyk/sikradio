@@ -17,11 +17,11 @@ using std::optional;
 using std::nullopt;
 
 
-namespace sk_transmitter {
+namespace sender {
     class lockable_cache {
     private:
         std::mutex mut{};
-        std::vector<sk_transmitter::data_msg> container{};
+        std::vector<sender::data_msg> container{};
         size_t container_size;
 
         size_t internal_id(msg_id_t id) {
@@ -33,14 +33,14 @@ namespace sk_transmitter {
             container.reserve(container_size);
         }
 
-        optional<sk_transmitter::data_msg> atomic_get(sk_transmitter::msg_id_t id) {
+        optional<sender::data_msg> atomic_get(sender::msg_id_t id) {
             if (id >= container.size()) return nullopt;
 
             std::lock_guard<std::mutex> lock(mut);
-            return optional<sk_transmitter::data_msg>(container[internal_id(id)]);
+            return optional<sender::data_msg>(container[internal_id(id)]);
         }
 
-        void atomic_push(sk_transmitter::data_msg msg) {
+        void atomic_push(sender::data_msg msg) {
             std::lock_guard<std::mutex> lock(mut);
 
             // just to prevent segfault when copying to uninitialized memory

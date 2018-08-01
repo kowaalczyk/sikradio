@@ -2,13 +2,13 @@
 // Created by kowal on 31.05.18.
 //
 
-#ifndef SK_TRANSMITTER_EXCEPTIONS_HPP
-#define SK_TRANSMITTER_EXCEPTIONS_HPP
+#ifndef SIKRADIO_SENDER_EXCEPTIONS_HPP
+#define SIKRADIO_SENDER_EXCEPTIONS_HPP
 
 
 #include <string>
 
-namespace sk_transmitter {
+namespace sender {
     namespace exceptions {
         class socket_exception : public std::exception {
         private:
@@ -25,4 +25,4 @@ namespace sk_transmitter {
 }
 
 
-#endif //SK_TRANSMITTER_EXCEPTIONS_HPP
+#endif //SIKRADIO_SENDER_EXCEPTIONS_HPP

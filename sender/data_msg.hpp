@@ -2,8 +2,8 @@
 // Created by kowal on 31.05.18.
 //
 
-#ifndef SK_TRANSMITTER_INTERNAL_MSG_HPP
-#define SK_TRANSMITTER_INTERNAL_MSG_HPP
+#ifndef SIKRADIO_SENDER_INTERNAL_MSG_HPP
+#define SIKRADIO_SENDER_INTERNAL_MSG_HPP
 
 
 #include <utility>
@@ -12,7 +12,7 @@
 #include "types.hpp"
 
 
-namespace sk_transmitter {
+namespace sender {
     class data_msg {
     private:
         uint64_t htonll(uint64_t value) {
@@ -29,8 +29,8 @@ namespace sk_transmitter {
         }
 
     public:
-        sk_transmitter::msg_id_t id{};
-        sk_transmitter::msg_t data{};
+        sender::msg_id_t id{};
+        sender::msg_t data{};
 
         data_msg(msg_id_t id, msg_t data) : id{id},
                                                 data{std::move(data)} {}
@@ -69,4 +69,4 @@ namespace sk_transmitter {
 }
 
 
-#endif //SK_TRANSMITTER_INTERNAL_MSG_HPP
+#endif //SIKRADIO_SENDER_INTERNAL_MSG_HPP

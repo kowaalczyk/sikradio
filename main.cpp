@@ -1,14 +1,4 @@
-#include <iostream>
-#include <thread>
-#include <future>
-#include "sk_transmitter/data_msg.hpp"
-#include "sk_transmitter/types.hpp"
-#include "sk_transmitter/lockable_queue.hpp"
-#include "sk_transmitter/lockable_cache.hpp"
-#include "sk_transmitter/data_socket.hpp"
-#include "sk_transmitter/ctrl_msg.hpp"
-#include "sk_transmitter/ctrl_socket.hpp"
-#include "transmitter.hpp"
+#include "sender.hpp"
 #include <boost/program_options.hpp>
 
 
@@ -34,7 +24,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    sk_transmitter::transmitter transmitter(
+    sender::transmitter transmitter(
             vm["-p"].as<size_t>(),
             vm["-f"].as<size_t>(),
             vm["-R"].as<size_t>(),
