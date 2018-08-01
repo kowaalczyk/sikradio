@@ -1,6 +1,7 @@
-# clion
+# IDEs
 .idea
 cmake-build-*
+.vscode
 # data files
 bin
 mp3

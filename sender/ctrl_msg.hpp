@@ -1,9 +1,5 @@
-//
-// Created by kowal on 02.06.18.
-//
-
-#ifndef SIK_NADAJNIK_CTRL_MSG_HPP
-#define SIK_NADAJNIK_CTRL_MSG_HPP
+#ifndef SIKRADIO_SENDER_CTRL_MSG_HPP
+#define SIKRADIO_SENDER_CTRL_MSG_HPP
 
 
 #include <sys/socket.h>
@@ -73,4 +69,4 @@ namespace sender {
 }
 
 
-#endif //SIK_NADAJNIK_CTRL_MSG_HPP
+#endif //SIKRADIO_SENDER_CTRL_MSG_HPP

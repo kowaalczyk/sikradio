@@ -1,9 +1,5 @@
-//
-// Created by kowal on 01.06.18.
-//
-
-#ifndef SIK_NADAJNIK_SK_SOCKET_HPP
-#define SIK_NADAJNIK_SK_SOCKET_HPP
+#ifndef SIKRADIO_SENDER_SK_SOCKET_HPP
+#define SIKRADIO_SENDER_SK_SOCKET_HPP
 
 
 #include <netinet/in.h>
@@ -15,6 +11,7 @@
 #include <arpa/inet.h>
 #include "data_msg.hpp"
 #include "exceptions.hpp"
+
 
 #define TTL_VALUE     64
 
@@ -87,4 +84,4 @@ namespace sender {
 }
 
 
-#endif //SIK_NADAJNIK_SK_SOCKET_HPP
+#endif //SIKRADIO_SENDER_SK_SOCKET_HPP

@@ -1,9 +1,5 @@
-//
-// Created by kowal on 01.06.18.
-//
-
-#ifndef SIK_NADAJNIK_LOCKABLE_QUEUE_HPP
-#define SIK_NADAJNIK_LOCKABLE_QUEUE_HPP
+#ifndef SIKRADIO_SENDER_LOCKABLE_QUEUE_HPP
+#define SIKRADIO_SENDER_LOCKABLE_QUEUE_HPP
 
 
 #include <mutex>
@@ -57,4 +53,4 @@ namespace sender {
 }
 
 
-#endif //SIK_NADAJNIK_LOCKABLE_QUEUE_HPP
+#endif //SIKRADIO_SENDER_LOCKABLE_QUEUE_HPP

@@ -1,13 +1,10 @@
-//
-// Created by kowal on 31.05.18.
-//
-
 #ifndef SIKRADIO_SENDER_TYPES_HPP
 #define SIKRADIO_SENDER_TYPES_HPP
 
 
 #include <cstdio>
 #include <vector>
+
 
 namespace sender {
     typedef uint64_t msg_id_t;

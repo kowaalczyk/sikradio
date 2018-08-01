@@ -1,9 +1,5 @@
-//
-// Created by kowal on 01.06.18.
-//
-
-#ifndef SIK_NADAJNIK_LOCKABLE_CACHE_HPP
-#define SIK_NADAJNIK_LOCKABLE_CACHE_HPP
+#ifndef SIKRADIO_SENDER_LOCKABLE_CACHE_HPP
+#define SIKRADIO_SENDER_LOCKABLE_CACHE_HPP
 
 
 #include <vector>
@@ -51,4 +47,4 @@ namespace sender {
 }
 
 
-#endif //SIK_NADAJNIK_LOCKABLE_CACHE_HPP
+#endif //SIKRADIO_SENDER_LOCKABLE_CACHE_HPP

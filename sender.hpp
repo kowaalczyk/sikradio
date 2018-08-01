@@ -1,9 +1,6 @@
-//
-// Created by kowal on 08.06.18.
-//
+#ifndef SIKRADIO_SENDER_TRANSMITTER_HPP
+#define SIKRADIO_SENDER_TRANSMITTER_HPP
 
-#ifndef SIK_NADAJNIK_TRANSMITTER_HPP
-#define SIK_NADAJNIK_TRANSMITTER_HPP
 
 #include <cstdint>
 #include <iostream>
@@ -15,6 +12,7 @@
 #include "sender/lockable_cache.hpp"
 #include "sender/lockable_queue.hpp"
 #include "sender/ctrl_socket.hpp"
+
 
 namespace sender {
     class transmitter {
@@ -130,7 +128,6 @@ namespace sender {
         }
 
     public:
-
         explicit transmitter(size_t PSIZE = 512,
                              size_t FSIZE = 65536,
                              size_t RTIME = 250,
@@ -167,4 +164,5 @@ namespace sender {
     };
 }
 
-#endif //SIK_NADAJNIK_TRANSMITTER_HPP
+
+#endif //SIKRADIO_SENDER_TRANSMITTER_HPP

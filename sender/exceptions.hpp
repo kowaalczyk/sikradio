@@ -1,12 +1,9 @@
-//
-// Created by kowal on 31.05.18.
-//
-
 #ifndef SIKRADIO_SENDER_EXCEPTIONS_HPP
 #define SIKRADIO_SENDER_EXCEPTIONS_HPP
 
 
 #include <string>
+
 
 namespace sender {
     namespace exceptions {
