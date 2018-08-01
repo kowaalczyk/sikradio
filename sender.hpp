@@ -63,7 +63,7 @@ namespace sender {
 
                         while (true) {
                             try {
-                                sock.respond(req.value(), lookup_response.c_str(), sizeof(lookup_response.c_str()));
+                                sock.respond(req.value(), lookup_response.c_str(), strlen(lookup_response.c_str()));
                                 break;
                             } catch (sender::exceptions::socket_exception &e) {
                                 // retry

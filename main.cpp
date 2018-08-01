@@ -17,8 +17,8 @@ int main(int argc, char *argv[]) {
             (",n", po::value<std::string>()->default_value("Nienazwany_nadajnik"), "NAZWA");
 
     po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
+        po::store(po::parse_command_line(argc, argv, desc), vm);
         po::notify(vm);
     } catch (po::error &e) {
         std::cerr << e.what() << std::endl;
