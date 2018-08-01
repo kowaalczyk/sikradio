@@ -11,34 +11,34 @@
 #include <atomic>
 #include <set>
 #include "data_msg.hpp"
-#include "../lib/optional.hpp"
+#include <optional>
 
 
-using nonstd::optional;  // TODO: Change in deployment
-using nonstd::nullopt;  // TODO: Change in deployment
+using std::optional;
+using std::nullopt;
 
 
-namespace sk_transmitter {
+namespace sender {
     class lockable_queue {
     private:
         std::mutex mut{};
-        std::queue<sk_transmitter::data_msg> q{};
+        std::queue<sender::data_msg> q{};
 
     public:
         lockable_queue() = default;
 
-        optional<sk_transmitter::data_msg> atomic_get_and_pop() {
+        optional<sender::data_msg> atomic_get_and_pop() {
             if (q.empty()) return nullopt;
 
             std::lock_guard<std::mutex> lock(mut);
 
             auto ret = q.front();
             q.pop();
-            return optional<sk_transmitter::data_msg>(ret);
+            return optional<sender::data_msg>(ret);
         }
 
-        std::set<sk_transmitter::data_msg> atomic_get_unique() {
-            std::set<sk_transmitter::data_msg> ret;
+        std::set<sender::data_msg> atomic_get_unique() {
+            std::set<sender::data_msg> ret;
 
             std::lock_guard<std::mutex> lock(mut);
 
@@ -49,7 +49,7 @@ namespace sk_transmitter {
             return ret;
         }
 
-        void atomic_push(sk_transmitter::data_msg msg) {
+        void atomic_push(sender::data_msg msg) {
             std::lock_guard<std::mutex> lock(mut);
             q.push(std::move(msg));
         }

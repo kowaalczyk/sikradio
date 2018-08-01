@@ -14,18 +14,18 @@
 #include <zconf.h>
 #include <iostream>
 #include "exceptions.hpp"
-#include "../lib/optional.hpp"
+#include <optional>
 #include "ctrl_msg.hpp"
 
 
 #define UDP_DATAGRAM_DATA_LEN_MAX 65535
 
 
-using nonstd::optional;
-using nonstd::nullopt;
+using std::optional;
+using std::nullopt;
 
 
-namespace sk_transmitter {
+namespace sender {
     class ctrl_socket {
     private:
         sockaddr_in local_addr{};
@@ -39,12 +39,12 @@ namespace sk_transmitter {
 
             // standard socket setup
             sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-            if (sock < 0) throw sk_transmitter::exceptions::socket_exception(strerror(errno));
+            if (sock < 0) throw sender::exceptions::socket_exception(strerror(errno));
 
             // listen on broadcast
             int broadcast = 1;
             int err = setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
-            if (err < 0) throw sk_transmitter::exceptions::socket_exception(strerror(errno));
+            if (err < 0) throw sender::exceptions::socket_exception(strerror(errno));
 
             // set timeout to 1 second to prevent deadlocks (possible with optional returns)
             struct timeval tv{
@@ -52,14 +52,14 @@ namespace sk_transmitter {
                     .tv_usec = 0
             };
             err = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-            if (err < 0) throw sk_transmitter::exceptions::socket_exception(strerror(errno));
+            if (err < 0) throw sender::exceptions::socket_exception(strerror(errno));
 
             // bind socket
             local_addr.sin_family = AF_INET;
             local_addr.sin_port = htons(local_port);
             local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
             err = bind(sock, (struct sockaddr *) &local_addr, sizeof(local_addr));
-            if (err < 0) throw sk_transmitter::exceptions::socket_exception(strerror(errno));
+            if (err < 0) throw sender::exceptions::socket_exception(strerror(errno));
 
             set_up = true;
         }
@@ -67,7 +67,7 @@ namespace sk_transmitter {
     public:
         explicit ctrl_socket(in_port_t local_port) : local_port(local_port) {}
 
-        optional<sk_transmitter::ctrl_msg> receive() {
+        optional<sender::ctrl_msg> receive() {
             if (!set_up) setup_socket();
 
             struct sockaddr_in client_address{};
@@ -81,11 +81,11 @@ namespace sk_transmitter {
                     errno = 0;
                     return nullopt;
                 } else {
-                    throw sk_transmitter::exceptions::socket_exception(strerror(errno));
+                    throw sender::exceptions::socket_exception(strerror(errno));
                 }
             }
             std::string str_buffer(buffer, buffer+len);
-            return optional<sk_transmitter::ctrl_msg>(sk_transmitter::ctrl_msg(str_buffer, client_address));
+            return optional<sender::ctrl_msg>(sender::ctrl_msg(str_buffer, client_address));
         }
 
         void respond(const ctrl_msg &request, const char *response, size_t response_len) {
@@ -94,9 +94,9 @@ namespace sk_transmitter {
             ssize_t snd_len = sendto(sock, response, response_len, 0,
                                      reinterpret_cast<const sockaddr *>(&addr),
                                      (socklen_t) sizeof(request.get_sender_address()));
-            if (snd_len < 0) throw sk_transmitter::exceptions::socket_exception(strerror(errno));
+            if (snd_len < 0) throw sender::exceptions::socket_exception(strerror(errno));
             if (snd_len != static_cast<ssize_t>(response_len))
-                throw sk_transmitter::exceptions::socket_exception("Failed to send entire response");
+                throw sender::exceptions::socket_exception("Failed to send entire response");
         }
     };
 }

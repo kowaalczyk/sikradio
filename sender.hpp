@@ -9,14 +9,14 @@
 #include <iostream>
 #include <future>
 #include <utility>
-#include "sk_transmitter/types.hpp"
-#include "sk_transmitter/data_msg.hpp"
-#include "sk_transmitter/data_socket.hpp"
-#include "sk_transmitter/lockable_cache.hpp"
-#include "sk_transmitter/lockable_queue.hpp"
-#include "sk_transmitter/ctrl_socket.hpp"
+#include "sender/types.hpp"
+#include "sender/data_msg.hpp"
+#include "sender/data_socket.hpp"
+#include "sender/lockable_cache.hpp"
+#include "sender/lockable_queue.hpp"
+#include "sender/ctrl_socket.hpp"
 
-namespace sk_transmitter {
+namespace sender {
     class transmitter {
     private:
         size_t PSIZE = 512;
@@ -28,30 +28,30 @@ namespace sk_transmitter {
         std::string NAME = "";
 
         size_t sent_msgs_cache_size;
-        sk_transmitter::lockable_queue send_q{};
-        sk_transmitter::lockable_queue resend_q{};
-        sk_transmitter::lockable_cache sent_msgs;
-        sk_transmitter::msg_id_t session_id;
+        sender::lockable_queue send_q{};
+        sender::lockable_queue resend_q{};
+        sender::lockable_cache sent_msgs;
+        sender::msg_id_t session_id;
 
         void read() {
-            sk_transmitter::msg_t buf(PSIZE);
-            sk_transmitter::msg_id_t current_msg_id = 0;
+            sender::msg_t buf(PSIZE);
+            sender::msg_id_t current_msg_id = 0;
 
             while (!std::cin.eof()) {
                 std::cin.read(reinterpret_cast<char *>(buf.data()), buf.size());  // or `&buf[0]` on older platforms
-                sk_transmitter::data_msg msg(current_msg_id, buf);
+                sender::data_msg msg(current_msg_id, buf);
                 current_msg_id += PSIZE;
 
-                send_q.atomic_push(msg); // TODO: Make sure last chunk will be omitted
+                send_q.atomic_push(msg);
                 sent_msgs.atomic_push(msg);
             }
         }
 
         void listen(std::shared_future<void> reading_complete) {
-            sk_transmitter::ctrl_socket sock{CTRL_PORT};
+            sender::ctrl_socket sock{CTRL_PORT};
 
             while (reading_complete.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
-                optional<sk_transmitter::ctrl_msg> req = sock.receive();
+                optional<sender::ctrl_msg> req = sock.receive();
                 if (req.has_value()) {
 
                     if (req.value().is_lookup()) {
@@ -65,10 +65,9 @@ namespace sk_transmitter {
 
                         while (true) {
                             try {
-                                // TODO: Fill response with correct data
                                 sock.respond(req.value(), lookup_response.c_str(), sizeof(lookup_response.c_str()));
                                 break;
-                            } catch (sk_transmitter::exceptions::socket_exception &e) {
+                            } catch (sender::exceptions::socket_exception &e) {
                                 // retry
                             }
                         }
@@ -76,9 +75,9 @@ namespace sk_transmitter {
 
                     if (req.value().is_rexmit()) {
                         // msg_ids are present (in case there are no ids, vector will be empty but never null)
-                        std::vector<sk_transmitter::msg_id_t> msg_ids = req.value().get_rexmit_ids().value();
+                        std::vector<sender::msg_id_t> msg_ids = req.value().get_rexmit_ids().value();
                         for (auto id : msg_ids) {
-                            optional<sk_transmitter::data_msg> msg = sent_msgs.atomic_get(id);
+                            optional<sender::data_msg> msg = sent_msgs.atomic_get(id);
                             if (msg.has_value()) {
                                 if (msg.value().id == id) {  // message with desired id was still stored in cache
                                     resend_q.atomic_push(msg.value());
@@ -91,16 +90,16 @@ namespace sk_transmitter {
         }
 
         void resend(std::shared_future<void> reading_complete) {
-            sk_transmitter::data_socket sock{MCAST_ADDR, static_cast<in_port_t>(DATA_PORT)};
+            sender::data_socket sock{MCAST_ADDR, static_cast<in_port_t>(DATA_PORT)};
 
             while (reading_complete.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
-                std::set<sk_transmitter::data_msg> unique_msgs = resend_q.atomic_get_unique();  // Assuming we need to only retransmit each requested messag once
+                std::set<sender::data_msg> unique_msgs = resend_q.atomic_get_unique();  // Assuming we need to only retransmit each requested messag once
                 for (auto msg : unique_msgs) {
                     while (true) {
                         try {
                             sock.send(msg.sendable_with_session_id(session_id));
                             break;
-                        } catch (sk_transmitter::exceptions::socket_exception &e) {
+                        } catch (sender::exceptions::socket_exception &e) {
                             // retry
                         }
                     }
@@ -112,17 +111,17 @@ namespace sk_transmitter {
         }
 
         void send(std::shared_future<void> reading_complete) {
-            sk_transmitter::data_socket sock{MCAST_ADDR, static_cast<in_port_t>(DATA_PORT)};
+            sender::data_socket sock{MCAST_ADDR, static_cast<in_port_t>(DATA_PORT)};
 
             while (reading_complete.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
-                optional<sk_transmitter::data_msg> msg = send_q.atomic_get_and_pop();
+                optional<sender::data_msg> msg = send_q.atomic_get_and_pop();
 
                 if (msg.has_value()) {
                     while (true) {
                         try {
                             sock.send(msg.value().sendable_with_session_id(session_id));
                             break;
-                        } catch (sk_transmitter::exceptions::socket_exception &e) {
+                        } catch (sender::exceptions::socket_exception &e) {
                             // retry
                         }
                     }

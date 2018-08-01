@@ -14,17 +14,17 @@
 #include <zconf.h>
 #include <vector>
 #include "exceptions.hpp"
-#include "../lib/optional.hpp"
+#include <optional>
 #include "ctrl_msg.hpp"
 #include "types.hpp"
 #include <regex>
 
 
-using nonstd::optional;
-using nonstd::nullopt;
+using std::optional;
+using std::nullopt;
 
 
-namespace sk_transmitter {
+namespace sender {
     const std::string lookup_msg_key = "ZERO_SEVEN_COME_IN";
     const std::string rexmit_msg_key = "LOUDER_PLEASE ";
 
