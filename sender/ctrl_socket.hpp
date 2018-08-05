@@ -94,6 +94,17 @@ namespace sender {
             if (snd_len != static_cast<ssize_t>(response_len))
                 throw sender::exceptions::socket_exception("Failed to send entire response");
         }
+
+        void respond_force(const ctrl_msg &request, const char *response, size_t response_len) {
+            while (true) {
+                try {
+                    respond(request, response, response_len);
+                    break;
+                } catch (sender::exceptions::socket_exception &e) {
+                    // retry
+                }
+            }
+        }
     };
 }
 

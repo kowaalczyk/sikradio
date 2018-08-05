@@ -63,12 +63,23 @@ namespace sender {
         data_socket(std::string remote_dotted_address, in_port_t remote_port) : remote_dotted_address(std::move(
                 remote_dotted_address)), remote_port(remote_port) {}
 
-        void send(sender::msg_t sendable_msg) {
+        void transmit(sender::msg_t sendable_msg) {
             if (!connected) open_connection();
 
             auto msg_len = sendable_msg.size();
             auto sent_len = write(sock, sendable_msg.data(), msg_len);
             if (sent_len != static_cast<ssize_t>(msg_len)) throw sender::exceptions::socket_exception(strerror(errno));
+        }
+
+        void transmit_force(sender::msg_t sendable_msg) {
+            while (true) {
+                try {
+                    transmit(sendable_msg);
+                    break;
+                } catch (sender::exceptions::socket_exception &e) {
+                    // retry
+                }
+            }
         }
 
         void close_connection() {

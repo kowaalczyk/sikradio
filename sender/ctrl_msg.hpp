@@ -9,11 +9,13 @@
 #include <arpa/inet.h>
 #include <zconf.h>
 #include <vector>
-#include "exceptions.hpp"
 #include <optional>
+#include <regex>
+#include <assert.h>
+
+#include "exceptions.hpp"
 #include "ctrl_msg.hpp"
 #include "types.hpp"
-#include <regex>
 
 
 using std::optional;
@@ -31,18 +33,18 @@ namespace sender {
 
     public:
         ctrl_msg(std::string msg_data, const sockaddr_in &sender_address) : msg_data(std::move(msg_data)),
-                                                                                   sender_address(sender_address) {}
+                                                                            sender_address(sender_address) {}
 
-        bool is_lookup() {
+        bool is_lookup() const {
             return (msg_data.find(lookup_msg_key) == 0);
         }
 
-        bool is_rexmit() {
+        bool is_rexmit() const {
             return (msg_data.find(rexmit_msg_key) == 0);
         }
 
-        optional<std::vector<msg_id_t>> get_rexmit_ids() {
-            if (!is_rexmit()) return nullopt;
+        std::vector<msg_id_t> get_rexmit_ids() const {
+            assert(is_rexmit());
 
             std::string searchable(msg_data.begin()+(rexmit_msg_key.length()-1), msg_data.end());
             searchable[0] = ',';  // now all valid numbers will be preceeded by a comma
@@ -59,7 +61,7 @@ namespace sender {
                 ids.push_back(std::stoull(num_str));
             }
 
-            return optional<std::vector<msg_id_t>>(ids);
+            return ids;
         }
 
         sockaddr_in get_sender_address() const {
