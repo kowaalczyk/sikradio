@@ -13,6 +13,6 @@ all: sikradio-sender sikradio-receiver
 .PHONY: clean
 
 clean:
-	rm -f sikradio-sender *.o *.d *~ *.bak
+	rm -f sikradio-sender sikradio-receiver *.o *.d *~ *.bak
 
 -include $(DEPS)

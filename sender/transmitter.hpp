@@ -6,12 +6,12 @@
 #include <iostream>
 #include <future>
 #include <utility>
-#include "sender/types.hpp"
-#include "sender/data_msg.hpp"
-#include "sender/data_socket.hpp"
-#include "sender/lockable_cache.hpp"
-#include "sender/lockable_queue.hpp"
-#include "sender/ctrl_socket.hpp"
+#include "types.hpp"
+#include "data_msg.hpp"
+#include "data_socket.hpp"
+#include "lockable_cache.hpp"
+#include "lockable_queue.hpp"
+#include "ctrl_socket.hpp"
 
 
 namespace sender {
