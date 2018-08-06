@@ -5,7 +5,7 @@
 #include <string>
 
 
-namespace sender {
+namespace sikradio::sender {
     namespace exceptions {
         class socket_exception : public std::exception {
         private:

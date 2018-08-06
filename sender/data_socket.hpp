@@ -9,14 +9,18 @@
 #include <zconf.h>
 #include <cstring>
 #include <arpa/inet.h>
-#include "data_msg.hpp"
+
+#include "../common/data_msg.hpp"
 #include "exceptions.hpp"
 
 
-#define TTL_VALUE     64
+#define TTL_VALUE 64
 
 
-namespace sender {
+using socket_exception = sikradio::sender::exceptions::socket_exception;
+
+
+namespace sikradio::sender {
     class data_socket {
     private:
         std::string remote_dotted_address;
@@ -29,54 +33,66 @@ namespace sender {
             if (connected) return;
 
             sock = socket(AF_INET, SOCK_DGRAM, 0);
-            if (sock < 0) throw sender::exceptions::socket_exception(strerror(errno));
+            if (sock < 0) throw socket_exception(strerror(errno));
 
             int optval = 1;
-            int err = setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (void *) &optval, sizeof optval);
-            if (err < 0) throw sender::exceptions::socket_exception(strerror(errno));
+            int err = setsockopt(
+                sock, 
+                SOL_SOCKET, 
+                SO_BROADCAST, 
+                (void *) &optval, 
+                sizeof optval);
+            if (err < 0) throw socket_exception(strerror(errno));
 
             optval = TTL_VALUE;
-            err = setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, (void *) &optval, sizeof optval);
-            if (err < 0) throw sender::exceptions::socket_exception(strerror(errno));
+            err = setsockopt(
+                sock, 
+                IPPROTO_IP, 
+                IP_MULTICAST_TTL, 
+                (void *) &optval, 
+                sizeof optval);
+            if (err < 0) throw socket_exception(strerror(errno));
 
             struct sockaddr_in remote_address{
                     .sin_family = AF_INET,
                     .sin_port = htons(remote_port)
             };
             err = inet_aton(remote_dotted_address.c_str(), &remote_address.sin_addr);
-            if (err == 0) throw sender::exceptions::socket_exception("Invalid address");
+            if (err == 0) throw socket_exception("Invalid address");
 
-            err = connect(sock, (struct sockaddr *) &remote_address, sizeof remote_address);
-            if (err < 0) throw sender::exceptions::socket_exception(strerror(errno));
+            err = connect(sock, (struct sockaddr *) &remote_address, sizeof(remote_address));
+            if (err < 0) throw socket_exception(strerror(errno));
 
             connected = true;
         }
 
-        void reconnect_and_send(sender::msg_t sendable_msg, size_t msg_len) {
+        void reconnect_and_send(sikradio::common::msg_t sendable_msg, size_t msg_len) {
             close_connection();
             open_connection();
             auto sent_len = write(sock, sendable_msg.data(), msg_len);
-            if (sent_len != static_cast<ssize_t>(msg_len)) throw sender::exceptions::socket_exception(strerror(errno));
+            if (sent_len != static_cast<ssize_t>(msg_len)) throw socket_exception(strerror(errno));
         }
 
     public:
-        data_socket(std::string remote_dotted_address, in_port_t remote_port) : remote_dotted_address(std::move(
-                remote_dotted_address)), remote_port(remote_port) {}
+        data_socket(
+            std::string remote_dotted_address, 
+            in_port_t remote_port) : remote_dotted_address(std::move(remote_dotted_address)), 
+                                     remote_port(remote_port) {}
 
-        void transmit(sender::msg_t sendable_msg) {
+        void transmit(sikradio::common::msg_t sendable_msg) {
             if (!connected) open_connection();
 
             auto msg_len = sendable_msg.size();
             auto sent_len = write(sock, sendable_msg.data(), msg_len);
-            if (sent_len != static_cast<ssize_t>(msg_len)) throw sender::exceptions::socket_exception(strerror(errno));
+            if (sent_len != static_cast<ssize_t>(msg_len)) throw socket_exception(strerror(errno));
         }
 
-        void transmit_force(sender::msg_t sendable_msg) {
+        void transmit_force(sikradio::common::msg_t sendable_msg) {
             while (true) {
                 try {
                     transmit(sendable_msg);
                     break;
-                } catch (sender::exceptions::socket_exception &e) {
+                } catch (socket_exception &e) {
                     // retry
                 }
             }

@@ -1,20 +1,13 @@
-#ifndef SIKRADIO_SENDER_CTRL_MSG_HPP
-#define SIKRADIO_SENDER_CTRL_MSG_HPP
+#ifndef SIKRADIO_COMMON_CTRL_MSG_HPP
+#define SIKRADIO_COMMON_CTRL_MSG_HPP
 
 
-#include <sys/socket.h>
-#include <cstring>
 #include <utility>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <zconf.h>
-#include <vector>
-#include <optional>
 #include <regex>
-#include <assert.h>
+#include <netinet/in.h>
+#include <cstring>
+#include <cassert>
 
-#include "exceptions.hpp"
-#include "ctrl_msg.hpp"
 #include "types.hpp"
 
 
@@ -22,7 +15,7 @@ using std::optional;
 using std::nullopt;
 
 
-namespace sender {
+namespace sikradio::common {
     const std::string lookup_msg_key = "ZERO_SEVEN_COME_IN";
     const std::string rexmit_msg_key = "LOUDER_PLEASE ";
 
@@ -32,8 +25,10 @@ namespace sender {
         struct sockaddr_in sender_address{};
 
     public:
-        ctrl_msg(std::string msg_data, const sockaddr_in &sender_address) : msg_data(std::move(msg_data)),
-                                                                            sender_address(sender_address) {}
+        ctrl_msg(
+            std::string msg_data, 
+            const sockaddr_in &sender_address) : msg_data(std::move(msg_data)),
+                                                 sender_address(sender_address) {}
 
         bool is_lookup() const {
             return (msg_data.find(lookup_msg_key) == 0);
@@ -43,16 +38,19 @@ namespace sender {
             return (msg_data.find(rexmit_msg_key) == 0);
         }
 
-        std::vector<msg_id_t> get_rexmit_ids() const {
+        std::vector<sikradio::common::msg_id_t> get_rexmit_ids() const {
             assert(is_rexmit());
 
             std::string searchable(msg_data.begin()+(rexmit_msg_key.length()-1), msg_data.end());
             searchable[0] = ',';  // now all valid numbers will be preceeded by a comma
 
             std::regex r(",[0-9]+");
-            std::vector<msg_id_t> ids;
+            std::vector<sikradio::common::msg_id_t> ids;
 
-            for (std::sregex_iterator i = std::sregex_iterator(searchable.begin(), searchable.end(), r);
+            for (std::sregex_iterator i = std::sregex_iterator(
+                        searchable.begin(), 
+                        searchable.end(), 
+                        r);
                     i != std::sregex_iterator();
                     i++) {
                 std::string m_str = (*i).str();
@@ -71,4 +69,4 @@ namespace sender {
 }
 
 
-#endif //SIKRADIO_SENDER_CTRL_MSG_HPP
+#endif //SIKRADIO_COMMON_CTRL_MSG_HPP

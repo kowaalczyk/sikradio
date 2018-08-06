@@ -1,20 +1,21 @@
-#ifndef SIKRADIO_SENDER_INTERNAL_MSG_HPP
-#define SIKRADIO_SENDER_INTERNAL_MSG_HPP
+#ifndef SIKRADIO_COMMON_INTERNAL_MSG_HPP
+#define SIKRADIO_COMMON_INTERNAL_MSG_HPP
 
 
 #include <utility>
 #include <netinet/in.h>
 #include <cstring>
+
 #include "types.hpp"
 
 
-namespace sender {
+namespace sikradio::common {
     class data_msg {
     private:
         uint64_t htonll(uint64_t value) {
             static const int num = 2137;
 
-            if (*reinterpret_cast<const byte_t *>(&num) == num) {
+            if (*reinterpret_cast<const sikradio::common::msg_id_t *>(&num) == num) {
                 const uint32_t high_part = htonl(static_cast<uint32_t>(value >> 32));
                 const uint32_t low_part = htonl(static_cast<uint32_t>(value & 0xFFFFFFFFLL));
 
@@ -25,14 +26,14 @@ namespace sender {
         }
 
     public:
-        sender::msg_id_t id{};
-        sender::msg_t data{};
+        sikradio::common::msg_id_t id{};
+        sikradio::common::msg_t data{};
 
         data_msg(msg_id_t id, msg_t data) : id{id},
                                                 data{std::move(data)} {}
 
         msg_t sendable_with_session_id(msg_id_t session_id) {
-            byte_t msg[data.size() + 2 * sizeof(uint64_t)];
+            sikradio::common::msg_id_t msg[data.size() + 2 * sizeof(uint64_t)];
 
             auto net_session_id = htonll(session_id);
             auto net_id = htonll(id);
@@ -65,4 +66,4 @@ namespace sender {
 }
 
 
-#endif //SIKRADIO_SENDER_INTERNAL_MSG_HPP
+#endif //SIKRADIO_COMMON_INTERNAL_MSG_HPP
