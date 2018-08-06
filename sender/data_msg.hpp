@@ -1,7 +1,3 @@
-//
-// Created by kowal on 31.05.18.
-//
-
 #ifndef SIKRADIO_SENDER_INTERNAL_MSG_HPP
 #define SIKRADIO_SENDER_INTERNAL_MSG_HPP
 

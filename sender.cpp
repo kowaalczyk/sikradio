@@ -1,4 +1,4 @@
-#include "sender.hpp"
+#include "sender/transmitter.hpp"
 #include <boost/program_options.hpp>
 
 
