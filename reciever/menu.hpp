@@ -74,6 +74,7 @@ namespace sikradio::receiver {
             remove_old_items();
             notify_clients();
         }
+    };
 }
 
 
