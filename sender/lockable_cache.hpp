@@ -40,8 +40,8 @@ namespace sikradio::sender {
             std::lock_guard<std::mutex> lock(mut);
 
             // just to prevent segfault when copying to uninitialized memory
-            if (internal_id(msg.id) == container.size()) container.push_back(msg);
-            container[internal_id(msg.id)] = msg;
+            if (internal_id(msg.get_id()) == container.size()) container.push_back(msg);
+            container[internal_id(msg.get_id())] = msg;
         }
     };
 }

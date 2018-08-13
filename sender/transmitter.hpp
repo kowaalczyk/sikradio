@@ -58,7 +58,7 @@ namespace sikradio::sender {
             
             for (auto id : msg_ids) {
                 optional<sikradio::common::data_msg> msg = sent_msgs.atomic_get(id);
-                if (msg.has_value() && msg.value().id == id) {
+                if (msg.has_value() && msg.value().get_id() == id) {
                     // message with desired id was still stored in cache
                     resend_q.atomic_push(msg.value());
                 }
@@ -102,7 +102,8 @@ namespace sikradio::sender {
                 // make set not to retransmit same message twice in one batch
                 std::set<sikradio::common::data_msg> unique_msgs = resend_q.atomic_get_unique();
                 for (auto msg : unique_msgs) {
-                    sock.transmit_force(msg.sendable_with_session_id(session_id));
+                    msg.set_session_id(session_id);
+                    sock.transmit_force(msg.sendable());
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(RTIME));
             }
@@ -114,7 +115,8 @@ namespace sikradio::sender {
             while (reading_complete.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
                 optional<sikradio::common::data_msg> msg = send_q.atomic_get_and_pop();
                 if (msg.has_value()) {
-                    sock.transmit_force(msg.value().sendable_with_session_id(session_id));
+                    msg.value().set_session_id(session_id);
+                    sock.transmit_force(msg.value().sendable());
                 }
             }
         }
