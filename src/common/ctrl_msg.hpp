@@ -1,37 +1,38 @@
 #ifndef SIKRADIO_COMMON_CTRL_MSG_HPP
 #define SIKRADIO_COMMON_CTRL_MSG_HPP
 
-
-#include <utility>
+#include <vector>
 #include <regex>
-#include <netinet/in.h>
+#include <utility>
 #include <cstring>
 #include <cassert>
+#include <netinet/in.h>
 
 #include "types.hpp"
 
-
-using std::optional;
-using std::nullopt;
-
-
 namespace sikradio::common {
-    const std::string lookup_msg_key = "ZERO_SEVEN_COME_IN";
-    const std::string rexmit_msg_key = "LOUDER_PLEASE ";
+    namespace {
+        const std::string lookup_msg_key = "ZERO_SEVEN_COME_IN";
+        const std::string reply_msg_key = "BOREWICZ_HERE ";
+        const std::string rexmit_msg_key = "LOUDER_PLEASE ";
+    }
 
     class ctrl_msg {
     private:
         std::string msg_data{};
-        struct sockaddr_in sender_address{};
 
     public:
-        ctrl_msg(
-            std::string msg_data, 
-            const sockaddr_in &sender_address) : msg_data(std::move(msg_data)),
-                                                 sender_address(sender_address) {}
+        ctrl_msg() = default;
+        ctrl_msg(const ctrl_msg& other) = default;
+
+        explicit ctrl_msg(std::string msg_data) : msg_data(std::move(msg_data)) {}
 
         bool is_lookup() const {
             return (msg_data.find(lookup_msg_key) == 0);
+        }
+
+        bool is_reply() const {
+            return (msg_data.find(reply_msg_key) == 0);
         }
 
         bool is_rexmit() const {
@@ -62,10 +63,40 @@ namespace sikradio::common {
             return ids;
         }
 
-        sockaddr_in get_sender_address() const {
-            return sender_address;
+        std::tuple<std::string, std::string, in_port_t> get_reply_data() const {
+            assert(is_reply());
+            // TODO
+            return std::make_tuple(std::string(""), std::string(""), static_cast<in_port_t>(2137));
+        }
+
+        std::string sendable() const {
+            return msg_data;
         }
     };
+
+    ctrl_msg make_lookup() {
+        return ctrl_msg(lookup_msg_key);
+    }
+
+    ctrl_msg make_reply(const std::string &name, const std::string &mcast_addr, in_port_t data_port) {
+        std::string str = lookup_msg_key;
+        str += mcast_addr;
+        str += " ";
+        str += std::to_string(data_port);
+        str += " ";
+        str += name;
+        str += "\n";
+        return ctrl_msg(str);
+    }
+
+    ctrl_msg make_rexmit(std::vector<sikradio::common::msg_id_t> ids) {
+        std::ostringstream ss;
+        for(auto it = ids.begin(); it != ids.end(); it++) {
+            if (it != ids.begin()) ss << ",";
+            ss << std::to_string(*it);
+        }
+        return ctrl_msg(rexmit_msg_key + ss.str());
+    }
 }
 
 

@@ -1,11 +1,10 @@
-#ifndef SIKRADIO_SENDER_EXCEPTIONS_HPP
-#define SIKRADIO_SENDER_EXCEPTIONS_HPP
-
+#ifndef SIKRADIO_COMMON_EXCEPTIONS_HPP
+#define SIKRADIO_COMMON_EXCEPTIONS_HPP
 
 #include <string>
+#include <exception>
 
-
-namespace sikradio::sender::exceptions {
+namespace sikradio::common::exceptions {
     class socket_exception : public std::exception {
     private:
         const std::string msg_str;
@@ -19,5 +18,4 @@ namespace sikradio::sender::exceptions {
     };
 }
 
-
-#endif //SIKRADIO_SENDER_EXCEPTIONS_HPP
+#endif
