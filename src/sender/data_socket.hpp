@@ -66,13 +66,6 @@ namespace sikradio::sender {
             connected = true;
         }
 
-        void reconnect_and_send(sikradio::common::msg_t sendable_msg, size_t msg_len) {
-            close_connection();
-            open_connection();
-            auto sent_len = write(sock, sendable_msg.data(), msg_len);
-            if (sent_len != static_cast<ssize_t>(msg_len)) throw socket_exception(strerror(errno));
-        }
-
     public:
         data_socket(
             std::string remote_dotted_address, 

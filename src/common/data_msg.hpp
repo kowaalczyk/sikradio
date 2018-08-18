@@ -121,10 +121,6 @@ namespace sikradio::common {
             return !(*this < rhs);
         }
     };
-
-    sikradio::common::data_msg as_data_msg(const sikradio::common::byte_t *raw_msg) {
-        return data_msg(raw_msg);
-    }
 }
 
 
