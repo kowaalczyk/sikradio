@@ -11,13 +11,13 @@
 #include <arpa/inet.h>
 
 #include "../common/data_msg.hpp"
-#include "exceptions.hpp"
+#include "../common/exceptions.hpp"
 
 
 #define TTL_VALUE 64
 
 
-using socket_exception = sikradio::sender::exceptions::socket_exception;
+using socket_exception = sikradio::common::exceptions::socket_exception;
 
 
 namespace sikradio::sender {

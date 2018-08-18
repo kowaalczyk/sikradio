@@ -8,10 +8,10 @@
 #include <utility>
 #include "../common/types.hpp"
 #include "../common/data_msg.hpp"
+#include "../common/ctrl_socket.hpp"
 #include "data_socket.hpp"
 #include "lockable_cache.hpp"
 #include "lockable_queue.hpp"
-#include "ctrl_socket.hpp"
 
 
 namespace sikradio::sender {
@@ -33,29 +33,7 @@ namespace sikradio::sender {
         sikradio::sender::lockable_cache sent_msgs;
         sikradio::common::msg_id_t session_id;
 
-        std::string compose_lookup_response() {
-            std::string lookup_response = "BOREWICZ_HERE ";
-            lookup_response += MCAST_ADDR;
-            lookup_response += " ";
-            lookup_response += std::to_string(DATA_PORT);
-            lookup_response += " ";
-            lookup_response += NAME;
-            lookup_response += "\n";
-            return lookup_response;
-        }
-
-        void process_lookup_request(sikradio::sender::ctrl_socket &sock, sikradio::common::ctrl_msg &req) {
-            std::string lookup_response = compose_lookup_response();
-            sock.respond_force(
-                req, 
-                lookup_response.c_str(), 
-                strlen(lookup_response.c_str())
-            );
-        }
-
-        void process_rexmit_request(sikradio::common::ctrl_msg &req) {
-            std::vector<sikradio::common::msg_id_t> msg_ids = req.get_rexmit_ids();
-            
+        void retransmit_ids(const std::vector<sikradio::common::msg_id_t>& msg_ids) {
             for (auto id : msg_ids) {
                 optional<sikradio::common::data_msg> msg = sent_msgs.atomic_get(id);
                 if (msg.has_value() && msg.value().get_id() == id) {
@@ -80,17 +58,20 @@ namespace sikradio::sender {
         }
 
         void run_listener(std::shared_future<void> reading_complete) {
-            sikradio::sender::ctrl_socket sock{CTRL_PORT};
+            sikradio::common::ctrl_socket sock{CTRL_PORT};
 
             while (reading_complete.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
-                optional<sikradio::common::ctrl_msg> req = sock.receive();
+                auto req = sock.try_read();
                 if (!req.has_value()) continue;
-
-                if (req.value().is_lookup()) {
-                    process_lookup_request(sock, req.value());
+                
+                sikradio::common::ctrl_msg msg{std::get<0>(req.value())};
+                struct sockaddr_in sender{std::get<1>(req.value())};
+                if (msg.is_lookup()) {
+                    auto reply = sikradio::common::make_reply(NAME, MCAST_ADDR, DATA_PORT);
+                    sock.force_send_to(sender, reply);
                 }
-                if (req.value().is_rexmit()) {
-                    process_rexmit_request(req.value());
+                if (msg.is_rexmit()) {
+                    retransmit_ids(msg.get_rexmit_ids());
                 }
             }
         }

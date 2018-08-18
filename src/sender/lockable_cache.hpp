@@ -5,7 +5,6 @@
 #include <vector>
 #include <mutex>
 #include "../common/data_msg.hpp"
-#include "exceptions.hpp"
 #include <optional>
 
 
