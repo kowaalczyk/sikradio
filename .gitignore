@@ -6,5 +6,7 @@ cmake-build-*
 bin
 mp3
 *.pdf
-# executables
+# executables and build files
 sikradio-sender
+sikradio-receiver
+test/build

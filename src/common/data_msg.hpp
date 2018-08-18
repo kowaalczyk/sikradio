@@ -10,28 +10,27 @@
 
 #include "types.hpp"
 
+namespace {
+    uint64_t htonll(uint64_t value) {
+        static const int num = 2137;
 
-namespace sikradio::common {
-    namespace {
-        uint64_t htonll(uint64_t value) {
-            static const int num = 2137;
+        if (*reinterpret_cast<const sikradio::common::msg_id_t *>(&num) == num) {
+            const uint32_t high_part = htonl(static_cast<uint32_t>(value >> 32));
+            const uint32_t low_part = htonl(static_cast<uint32_t>(value & 0xFFFFFFFFLL));
 
-            if (*reinterpret_cast<const sikradio::common::msg_id_t *>(&num) == num) {
-                const uint32_t high_part = htonl(static_cast<uint32_t>(value >> 32));
-                const uint32_t low_part = htonl(static_cast<uint32_t>(value & 0xFFFFFFFFLL));
-
-                return (static_cast<uint64_t>(low_part) << 32) | high_part;
-            } else {
-                return value;
-            }
-        }
-
-        uint64_t ntohll(uint64_t value) {
-            // TODO
-            return 0;
+            return (static_cast<uint64_t>(low_part) << 32) | high_part;
+        } else {
+            return value;
         }
     }
 
+    uint64_t ntohll(uint64_t value) {
+        // TODO
+        return 0;
+    }
+}
+
+namespace sikradio::common {
     class data_msg {
     private:
         sikradio::common::msg_id_t id;
