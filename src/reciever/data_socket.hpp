@@ -42,6 +42,7 @@ namespace sikradio::receiver {
 
         void connect(const std::string& multicast_dotted_address) {
             std::lock_guard<std::mutex> lock(mut);
+            if (multicast_dotted_address == this->multicast_dotted_address && sock >= 0) return;
             this->multicast_dotted_address = multicast_dotted_address;
             // if socket was opened, reconnect
             if (sock >= 0) close(sock);

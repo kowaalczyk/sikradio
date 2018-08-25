@@ -2,6 +2,7 @@
 #define SIKRADIO_COMMON_CTRL_MSG_HPP
 
 #include <vector>
+#include <set>
 #include <regex>
 #include <utility>
 #include <cstring>
@@ -89,7 +90,7 @@ namespace sikradio::common {
         return ctrl_msg(str);
     }
 
-    ctrl_msg make_rexmit(std::vector<sikradio::common::msg_id_t> ids) {
+    ctrl_msg make_rexmit(std::set<sikradio::common::msg_id_t> ids) {
         std::ostringstream ss;
         for(auto it = ids.begin(); it != ids.end(); it++) {
             if (it != ids.begin()) ss << ",";
