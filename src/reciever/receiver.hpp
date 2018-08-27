@@ -22,14 +22,14 @@ namespace sikradio::receiver {
 
     class receiver {
     private:
-        // TODO: UI socket
+        sikradio::receiver::buffer buffer;
         sikradio::receiver::data_socket data_socket;
         sikradio::common::ctrl_socket ctrl_socket;
-        sikradio::receiver::buffer buffer;
+        // TODO: UI socket
         sikredio::receiver::station_set station_set;
-        sikradio::receiver::rexmit_manager rexmit_manager;  // TODO: list of rexmit_ids + filtering + timestamps
-        // TODO: UI client manager
+        sikradio::receiver::rexmit_manager rexmit_manager;
         sikradio::receiver::state_manager state_manager;
+        // TODO: UI client manager
         std::mutex data_mut{};
 
         void run_playback_resetter() {  // LOCKS: 1 or 3
@@ -37,9 +37,8 @@ namespace sikradio::receiver {
             bool dirty;
             while(true) {
                 std::tie(multicast_address, dirty) = state_manager.check_state();
-                if (dirty) {
-                    // reset playback
-                    std::lock_guard<std::mutex> lock(data_mut);  // stops data reciever
+                if (dirty) {  // reset playback
+                    std::scoped_lock{data_mut};  // stops data reciever
                     buffer.reset();
                     rexmit_manager.reset();  // TODO: Make sure there is no deadlock
                     data_socket.connect(new_multicast_address);
@@ -58,8 +57,8 @@ namespace sikradio::receiver {
                 std::tie(msg, sender_addr) = rcv.value();
                 if (!msg.is_reply()) continue;
                 
-                auto station = sikradio::receiver::as_station(msg, sender_addr);  // TODO: Implement, remember about std::chrono::time_point now = std::chrono::system_clock::now();
-                auto new_selected = station_set.update_get_selected(station);  // TODO: Implement
+                auto station = sikradio::receiver::as_station(msg, sender_addr);
+                auto new_selected = station_set.update_get_selected(station);
                 state_manager.register_address(new_station.addres);
             }
         }
@@ -76,11 +75,7 @@ namespace sikradio::receiver {
             std::set<msg_id_t> ids_to_rexmit;
             std::set<msg_id_t> ids_to_forget;
             while(true) {
-                // TODO: rexmit_manager.filter_ids should take ids_to_forget, remove them from internal storage
-                // and return list of ids that can be retransmitted in this iteration, 
-                // according to condition: previous_rexmit < next_rexmit_time_for_msg <= now;
-                // (saving now as previous rexmit, and updating next_rexmit_time += RTIME for all returned values)
-                ids_to_rexmit = rexmit_manager.filter_ids(ids_to_forget);  // TODO: Implement
+                ids_to_rexmit = rexmit_manager.filter_get_ids(ids_to_forget);
                 ids_to_forget.clear();
                 for (auto it = ids_to_rexmit.begin(); it != ids_to_rexmit.end();) {
                     if (!buffer.has_space_for(*it)) {
@@ -99,10 +94,10 @@ namespace sikradio::receiver {
             }
         }
 
-        void run_data_reciever(data_socket*, buffer*, station_list*) {  // LOCKS: 1 or 2 or 4
+        void run_data_reciever() {  // LOCKS: 1 or 2 or 4
             std::optional<sikradio::common::msg_id_t> max_msg_id = std::nullopt;
             while(true) {
-                std::scoped_lock{mut};  // TODO: Check for deadlocks
+                std::scoped_lock{data_mut};  // TODO: Check for deadlocks
 
                 auto msg = data_socket.try_read();
                 if (!msg.has_value()) continue;
@@ -113,22 +108,21 @@ namespace sikradio::receiver {
 
                 auto msg_id = msg.value().id;
                 if (max_msg_id.has_value() && max_msg_id.value() + 1 != msg_id)
-                    rexmit_manager.append_ids(max_msg_id.value() + 1, msg_id);  // TODO: Implement
+                    rexmit_manager.append_ids(max_msg_id.value() + 1, msg_id);
 
                 buffer.write(msg.value());
                 max_msg_id = std::optional<sikradio::common::msg_id_t>(std::max(max_msg_id.value_or(0), current_id));
             }
         }
 
-        void run_data_streamer(buffer*) {  // LOCKS: 1 or 2
-            // TODO:
+        void run_data_streamer() {  // LOCKS: 1 or 2
             std::optional<sikradio::common::msg_t> msg = std::nullopt;
             while (true) {
                 try {
                     msg = buffer.try_read();
                 } catch sikradio::reciever::exceptions::buffer_access_exception &e {
                     std::cerr << e.what() << std::endl;
-                    state_manager.mark_dirty();  // TODO: Implement
+                    state_manager.mark_dirty();
                 }
                 if (!msg.has_value()) continue;
                 std::cout << msg.value().data();

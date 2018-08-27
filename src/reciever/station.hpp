@@ -25,7 +25,6 @@ namespace sikradio::reciever {
             return (names_equal && address_equal && port_equal);
         }
     };
-    typedef struct station station;
 }
 
 #endif
