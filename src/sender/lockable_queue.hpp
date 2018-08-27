@@ -26,7 +26,7 @@ namespace sikradio::sender {
         optional<sikradio::common::data_msg> atomic_get_and_pop() {
             if (q.empty()) return nullopt;
 
-            std::lock_guard<std::mutex> lock(mut);
+            std::scoped_lock{mut};
 
             auto ret = q.front();
             q.pop();
@@ -36,7 +36,7 @@ namespace sikradio::sender {
         std::set<sikradio::common::data_msg> atomic_get_unique() {
             std::set<sikradio::common::data_msg> ret;
 
-            std::lock_guard<std::mutex> lock(mut);
+            std::scoped_lock{mut};
 
             while(!q.empty()) {
                 ret.insert(q.front());
@@ -46,7 +46,7 @@ namespace sikradio::sender {
         }
 
         void atomic_push(sikradio::common::data_msg msg) {
-            std::lock_guard<std::mutex> lock(mut);
+            std::scoped_lock{mut};
             q.push(std::move(msg));
         }
     };
