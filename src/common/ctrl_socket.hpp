@@ -73,7 +73,7 @@ namespace sikradio::common {
         }
 
         std::optional<std::tuple<sikradio::common::ctrl_msg, struct sockaddr_in>> try_read() {
-            std::lock_guard<std::mutex> lock(read_mut);
+            std::scoped_lock{read_mut};
             struct sockaddr_in sender_address{};
             auto rcva_len = (socklen_t) sizeof(sender_address);
             char buffer[UDP_DATAGRAM_DATA_LEN_MAX];
@@ -98,7 +98,7 @@ namespace sikradio::common {
         }
 
         void send_to(const struct sockaddr_in& destination, sikradio::common::ctrl_msg msg) {
-            std::lock_guard<std::mutex> lock(write_mut);
+            std::scoped_lock{write_mut};
             auto data_len = strlen(msg.sendable().data());
             ssize_t snd_len = sendto(
                 sock, 
@@ -110,6 +110,16 @@ namespace sikradio::common {
             if (snd_len < 0) throw socket_exception(strerror(errno));
             if (snd_len != static_cast<ssize_t>(data_len)) 
                 throw socket_exception("Failed to send entire response");
+        }
+
+        void send_to(std::string address, in_port_t port, sikradio::common::ctrl_msg msg) {
+            struct sockaddr_in remote_addr{
+                .sin_family=AF_INET,
+                .sin_port=htons(port)
+            };
+            int err = inet_aton(address.data(), &remote_addr.sin_addr);
+            if (err == 0) throw socket_exception("Invalid address passed to inet_aton");
+            send_to(remote_addr, msg);
         }
 
         void force_send_to(const struct sockaddr_in& destination, sikradio::common::ctrl_msg msg) {

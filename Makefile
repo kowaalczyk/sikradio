@@ -1,15 +1,17 @@
-# development:
-COMPILER = g++-7
-PRE_FLAGS = -std=c++17 -Wall -Werror
-POST_FLAGS = -lpthread -lboost_program_options
-COMMON_TESTS = test/common/test_ctrl_msg.cpp test/common/test_data_msg.cpp
-SENDER_TESTS = test/sender/test_lockable_cache.cpp test/sender/test_lockable_queue.cpp
-RECEIVER_TESTS = 
-CATCH_TEST_FLAGS = -r compact
-# production:
-# COMPILER = g++
-# PRE_FLAGS = -std=c++17 -Wall -Werror
-# POST_FLAGS = -lpthread -lboost_program_options
+debug = true
+ifeq ($(debug), true)
+	COMPILER = g++-7
+	PRE_FLAGS = -std=c++17 -Wall -Werror -g
+	POST_FLAGS = -lpthread -lboost_program_options
+	COMMON_TESTS = test/common/test_ctrl_msg.cpp test/common/test_data_msg.cpp
+	SENDER_TESTS = test/sender/test_lockable_cache.cpp test/sender/test_lockable_queue.cpp
+	RECEIVER_TESTS = 
+	CATCH_TEST_FLAGS = -r compact
+else
+	COMPILER = g++
+	PRE_FLAGS = -std=c++17 -Wall -Werror -DNDEBUG
+	POST_FLAGS = -lpthread -lboost_program_options
+endif
 
 sikradio-sender: src/sender.cpp
 	$(COMPILER) $(PRE_FLAGS) $< $(POST_FLAGS) -o $@

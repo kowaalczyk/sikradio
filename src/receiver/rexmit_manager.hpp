@@ -8,22 +8,20 @@
 #include "../common/types.hpp"
 
 namespace sikradio::receiver {
-    namespace {
-        struct rexmit_id {
-            sikradio::common::msg_id_t id;
-            std::chrono::system_clock::time_point scheduled_update;
+    struct rexmit_id {
+        sikradio::common::msg_id_t id;
+        std::chrono::system_clock::time_point scheduled_update;
 
-            rexmit_id(sikradio::common::msg_id_t id, std::chrono::system_clock::time_point scheduled_update) : 
-                id{id}, 
-                scheduled_update{scheduled_update} {}
+        rexmit_id(sikradio::common::msg_id_t id, std::chrono::system_clock::time_point scheduled_update) : 
+            id{id}, 
+            scheduled_update{scheduled_update} {}
 
-            bool operator>(const rexmit_id& other) const {return id > other.id;}
-            bool operator>=(const rexmit_id& other) const {return id >= other.id;}
-            bool operator<=(const rexmit_id& other) const {return id <= other.id;}
-            bool operator<(const rexmit_id& other) const {return id < other.id;}
-            bool operator==(const rexmit_id& other) const {return id == other.id;}
-        };
-    }
+        bool operator>(const rexmit_id& other) const {return id > other.id;}
+        bool operator>=(const rexmit_id& other) const {return id >= other.id;}
+        bool operator<=(const rexmit_id& other) const {return id <= other.id;}
+        bool operator<(const rexmit_id& other) const {return id < other.id;}
+        bool operator==(const rexmit_id& other) const {return id == other.id;}
+    };
 
     class rexmit_manager {
     private:
@@ -49,7 +47,7 @@ namespace sikradio::receiver {
         std::set<sikradio::common::msg_id_t> filter_get_ids(std::set<sikradio::common::msg_id_t> ids_to_forget) {
             std::scoped_lock{mut};
 
-            std::set<msg_id_t> ids_to_update;
+            std::set<sikradio::common::msg_id_t> ids_to_update;
             auto this_update = std::chrono::system_clock::now();
             auto next_update = this_update + rtime;
             for (auto it = rexmit_ids.begin(); it != rexmit_ids.end(); /* update in body */) {
@@ -60,6 +58,13 @@ namespace sikradio::receiver {
                 rexmit_ids.emplace_hint(it, it->id, next_update);
             }
             return ids_to_update;
+        }
+
+        void reset() {
+            std::scoped_lock{mut};
+
+            rexmit_ids.clear();
+            last_update = std::chrono::system_clock::now();
         }
     };
 }

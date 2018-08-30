@@ -1,9 +1,11 @@
 #include <boost/program_options.hpp>
 #include <iostream>
+#include <cstdint>
+#include <optional>
 
+#include "receiver/receiver.hpp"
 
 namespace po = boost::program_options;
-
 
 int main(int argc, char *argv[]) {
     po::options_description desc("Allowed options");
@@ -23,5 +25,19 @@ int main(int argc, char *argv[]) {
         std::cerr << e.what() << std::endl;
         exit(1);
     }
-    // TODO: Reciever 
+    std::string ps_input = vm["-n"].as<std::string>();
+    std::optional<std::string> preferred_station = ps_input.empty() ? 
+        std::nullopt : std::make_optional(ps_input);
+
+    sikradio::receiver::receiver rcvr(
+        vm["-d"].as<std::string>(),
+        vm["-C"].as<uint16_t>(),
+        vm["-U"].as<uint16_t>(),
+        vm["-b"].as<size_t>(),
+        vm["-R"].as<size_t>(),
+        preferred_station
+    );
+    rcvr.run();
+
+    return 0;
 }

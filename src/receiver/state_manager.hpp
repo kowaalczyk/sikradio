@@ -49,6 +49,11 @@ namespace sikradio::receiver {
             dirty = true;
             return true;
         }
+
+        void mark_dirty() {
+            std::scoped_lock{mut};
+            dirty = true;
+        }
     };
 }
 

@@ -47,7 +47,7 @@ namespace sikradio::receiver {
         }
 
         void save_missed_message(const sikradio::common::data_msg &msg) {
-            assert(msg_ids.front() <= msg.get_id() <= msg_ids.back());
+            assert(msg_ids.front() <= msg.get_id() && msg.get_id() <= msg_ids.back());
             // message already has allocated space in the buffer - no need to pop elements
             size_t msg_pos = msg.get_id() - msg_ids.front();
             msg_vals[msg_pos] = std::make_optional(msg.get_data());
@@ -70,7 +70,7 @@ namespace sikradio::receiver {
             // save message to buffer
             if (msg_ids.empty() || msg.get_id() > msg_ids.back()) {
                 save_new_message(msg);
-            } else if (msg_ids.front() <= msg.get_id() <= msg_ids.back()) {
+            } else if (msg_ids.front() <= msg.get_id() && msg.get_id() <= msg_ids.back()) {
                 save_missed_message(msg);
             } else {
                 // received message is so old that it will be ignored
@@ -94,7 +94,7 @@ namespace sikradio::receiver {
             std::scoped_lock{mut};
 
             auto is_readable = (state == sikradio::receiver::buffer_state::READABLE);
-            auto has_space = (msg_ids.front() <= id <= msg_ids.back());
+            auto has_space = (msg_ids.front() <= id && id <= msg_ids.back());
             return (is_readable && has_space);
         }
 

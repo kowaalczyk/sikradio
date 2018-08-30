@@ -26,7 +26,7 @@ namespace sikradio::receiver {
         std::mutex mut{};
         std::optional<std::string> preferred_station_name{std::nullopt};
         std::set<sikradio::receiver::station> stations{};
-        std::set<sikradio::receiver::station>::iterator selected_station{};
+        std::set<sikradio::receiver::station>::iterator selected_station = stations.end();
 
         /**
          * Removes stations older than MAX_INACTIVE_SECONDS from the internal collection.
@@ -52,7 +52,7 @@ namespace sikradio::receiver {
             }
         }
 
-        std::optional<sikradio::receiver::station> selected_station() {
+        std::optional<sikradio::receiver::station> get_selected_station() {
             if (stations.empty()) {
                 assert(selected_station == stations.begin());
                 assert(selected_station == stations.end());
@@ -68,7 +68,9 @@ namespace sikradio::receiver {
             this->preferred_station_name = std::make_optional(std::move(preferred_station_name));
         }
 
-        std::optional<sikradio::reciever::station> update_get_selected(const sikradio::receiver::station &new_station) {
+        explicit station_set(std::optional<std::string> preferred_station_name) : preferred_station_name{preferred_station_name} {}
+
+        std::optional<sikradio::receiver::station> update_get_selected(const sikradio::receiver::station &new_station) {
             std::scoped_lock{mut};
 
             std::set<sikradio::receiver::station>::iterator new_it;
@@ -79,25 +81,25 @@ namespace sikradio::receiver {
             if (preferred_station_name.has_value() && preferred_station_name.value() == new_station.name)
                 selected_station = new_it;
             remove_old_stations();
-            return selected_station();
+            return get_selected_station();
         }
 
-        std::optional<sikradio::reciever::station> select_get_selected(const sikradio::receiver::menu_selection_update msu) {
+        std::optional<sikradio::receiver::station> select_get_selected(const sikradio::receiver::menu_selection_update msu) {
             std::scoped_lock{mut};
             
-            if (stations.empty()) return selected_station();
+            if (stations.empty()) return get_selected_station();
             if (msu == menu_selection_update::UP) {
                 if (std::next(selected_station) != stations.end()) selected_station++;
             } else {
                 if (selected_station != stations.begin()) selected_station--;
             }
             remove_old_stations();
-            return selected_station();
+            return get_selected_station();
         }
 
-        std::optional<sikradio::reciever::station> get_selected() {
+        std::optional<sikradio::receiver::station> get_selected() {
             std::scoped_lock{mut};
-            return selected_station();
+            return get_selected_station();
         }
 
         std::vector<std::string> get_printable_station_names() {

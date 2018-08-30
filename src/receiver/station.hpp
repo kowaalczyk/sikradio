@@ -6,7 +6,9 @@
 #include <cstdint>
 #include <netinet/in.h>
 
-namespace sikradio::reciever {
+#include "../common/ctrl_msg.hpp"
+
+namespace sikradio::receiver {
     struct station {
         std::string name;
         std::string ctrl_address;
@@ -25,6 +27,11 @@ namespace sikradio::reciever {
             return (names_equal && address_equal && port_equal);
         }
     };
+    typedef struct station station;
+
+    station as_station(sikradio::common::ctrl_msg, struct sockaddr_in sender_address) {
+        return station{};  // TODO
+    }
 }
 
 #endif

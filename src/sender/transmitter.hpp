@@ -6,13 +6,13 @@
 #include <iostream>
 #include <future>
 #include <utility>
+
 #include "../common/types.hpp"
 #include "../common/data_msg.hpp"
 #include "../common/ctrl_socket.hpp"
 #include "data_socket.hpp"
 #include "lockable_cache.hpp"
 #include "lockable_queue.hpp"
-
 
 namespace sikradio::sender {
     class transmitter {
