@@ -6,6 +6,7 @@
 #include <regex>
 #include <utility>
 #include <cstring>
+#include <string>
 #include <cassert>
 #include <netinet/in.h>
 
@@ -26,7 +27,7 @@ namespace sikradio::common {
         ctrl_msg() = default;
         ctrl_msg(const ctrl_msg& other) = default;
 
-        explicit ctrl_msg(std::string msg_data) : msg_data(std::move(msg_data)) {}
+        explicit ctrl_msg(std::string msg_data) : msg_data{std::move(msg_data)} {}
 
         bool is_lookup() const {
             return (msg_data.find(lookup_msg_key) == 0);
@@ -66,8 +67,24 @@ namespace sikradio::common {
 
         std::tuple<std::string, std::string, in_port_t> get_reply_data() const {
             assert(is_reply());
-            // TODO
-            return std::make_tuple(std::string(""), std::string(""), static_cast<in_port_t>(2137));
+            std::string addr;
+            std::string name;
+            in_port_t port;
+
+            std::regex r("(?: )(\\S+)");
+            std::sregex_iterator i = std::sregex_iterator(msg_data.begin(), msg_data.end(), r);
+            addr = (*i)[1];  // 1st capturing group in regex
+            i++;
+            port = static_cast<in_port_t>(std::stoul((*i)[1]));
+            i++;
+            name += (*i)[1];
+            i++;
+            for (; i != std::sregex_iterator(); i++) {
+                name += " ";
+                name += (*i)[1];
+            }
+
+            return std::make_tuple(name, addr, port);
         }
 
         std::string sendable() const {
@@ -80,7 +97,7 @@ namespace sikradio::common {
     }
 
     ctrl_msg make_reply(const std::string &name, const std::string &mcast_addr, in_port_t data_port) {
-        std::string str = lookup_msg_key;
+        std::string str = reply_msg_key;
         str += mcast_addr;
         str += " ";
         str += std::to_string(data_port);
