@@ -4,7 +4,6 @@
 #include <mutex>
 #include <deque>
 #include <optional>
-#include <cassert>
 
 #include "../common/data_msg.hpp"
 #include "../common/types.hpp"
@@ -20,7 +19,6 @@ namespace sikradio::receiver {
         std::mutex mut{};
 
         size_t max_elements;
-        size_t available_elements{};
 
         sikradio::common::msg_id_t byte_zero{};
         sikradio::receiver::buffer_state state{sikradio::receiver::buffer_state::NO_SESSION};
@@ -28,17 +26,21 @@ namespace sikradio::receiver {
         std::deque<sikradio::common::msg_id_t> msg_ids{};
 
         void save_new_message(const sikradio::common::data_msg &msg) {
-            assert(msg.get_id() > msg_ids.back());
+            if (msg_ids.empty()) {
+                msg_vals.emplace_back(std::make_optional(msg.get_data()));
+                msg_ids.emplace_back(msg.get_id());
+                return;
+            }
             // reserve empty space for missed messages and pop excessive elements
             for (auto missed_id = msg_ids.back() + 1; missed_id < msg.get_id(); missed_id++) {
-                if (msg_ids.size() >= max_elements) {
+                if (msg_ids.size() == max_elements) {
                     msg_ids.pop_front();
                     msg_vals.pop_front();
                 }
                 msg_vals.emplace_back(std::nullopt);
                 msg_ids.emplace_back(missed_id);
             }
-            if (msg_ids.size() >= max_elements) {
+            if (msg_ids.size() == max_elements) {
                 msg_ids.pop_front();
                 msg_vals.pop_front();
             }
@@ -47,7 +49,6 @@ namespace sikradio::receiver {
         }
 
         void save_missed_message(const sikradio::common::data_msg &msg) {
-            assert(msg_ids.front() <= msg.get_id() && msg.get_id() <= msg_ids.back());
             // message already has allocated space in the buffer - no need to pop elements
             size_t msg_pos = msg.get_id() - msg_ids.front();
             msg_vals[msg_pos] = std::make_optional(msg.get_data());
@@ -64,7 +65,7 @@ namespace sikradio::receiver {
                 byte_zero = msg.get_id();
                 state = sikradio::receiver::buffer_state::WAITING;
             }
-            if (msg.get_id() > byte_zero + max_elements*3/4) {
+            if (msg.get_id() >= byte_zero + max_elements*3/4) {
                 state = sikradio::receiver::buffer_state::READABLE;
             }
             // save message to buffer
@@ -93,9 +94,9 @@ namespace sikradio::receiver {
         bool has_space_for(const sikradio::common::msg_id_t id) {
             std::scoped_lock{mut};
 
-            auto is_readable = (state == sikradio::receiver::buffer_state::READABLE);
-            auto has_space = (msg_ids.front() <= id && id <= msg_ids.back());
-            return (is_readable && has_space);
+            bool is_in_session = (state != sikradio::receiver::buffer_state::NO_SESSION);
+            bool has_space = (msg_ids.front() <= id && id <= msg_ids.back());
+            return (is_in_session && has_space);
         }
 
         void reset() {
