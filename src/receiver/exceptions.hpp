@@ -5,18 +5,14 @@
 #include <string>
 #include <exception>
 
+#include "../common/exceptions.hpp"
+
+using base_exception = sikradio::common::exceptions::base_exception;
 
 namespace sikradio::receiver::exceptions {
-    class buffer_access_exception : public std::exception {
-    private:
-        const std::string msg_str;
-
+    class buffer_access_exception : public base_exception {
     public:
-        explicit buffer_access_exception(std::string msg_str) : msg_str(std::move(msg_str)) {}
-
-        const char *what() const noexcept override {
-            return msg_str.c_str();
-        }
+        explicit buffer_access_exception(std::string msg_str) : base_exception(std::move(msg_str)) {}
     };
 }
 

@@ -80,7 +80,9 @@ namespace sikradio::receiver {
                     throw socket_exception(strerror(errno));
                 }
             }
-            return std::optional<sikradio::common::data_msg>(sikradio::common::data_msg(buffer));
+            sikradio::common::msg_t raw_msg;
+            raw_msg.assign(buffer, buffer+sizeof(buffer));
+            return std::make_optional(sikradio::common::data_msg(raw_msg));
         }
 
         ~data_socket() {
