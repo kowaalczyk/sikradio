@@ -1,8 +1,12 @@
 #include "../catch.hpp"
 
 #include "../../src/common/exceptions.hpp"
-#include "../../src/common/data_msg.hpp"
 #include "../../src/common/types.hpp"
+#include "../../src/common/data_msg.hpp"
+
+#ifndef UDP_DATAGRAM_DATA_LEN_MAX
+#define UDP_DATAGRAM_DATA_LEN_MAX 65535
+#endif
 
 TEST_CASE("data message construction") {
     sikradio::common::msg_id_t id = 8;
@@ -32,12 +36,19 @@ TEST_CASE("data message construction") {
     }
     SECTION("from raw receiverd message") {
         auto test_msg = sikradio::common::data_msg(id, session_id, data);
-        auto rcvd = test_msg.sendable().data();
-        auto msg = sikradio::common::data_msg{rcvd};
+        // simulate message receive:
+        auto sndbl = test_msg.sendable();
+        char rcv_buff[UDP_DATAGRAM_DATA_LEN_MAX];
+        memcpy(rcv_buff, sndbl.data(), sndbl.size());
+        sikradio::common::msg_t raw_msg;
+        raw_msg.assign(rcv_buff, rcv_buff+sizeof(rcv_buff));
+        // actual construction from received message:
+        auto msg = sikradio::common::data_msg(raw_msg);
+        sikradio::common::msg_t rcvd_data(msg.get_data().begin(), msg.get_data().begin() + data.size());
 
         REQUIRE(msg.get_id() == id);
         REQUIRE(msg.get_session_id() == session_id);
-        REQUIRE(msg.get_data() == data);
+        REQUIRE(rcvd_data == data);
         REQUIRE_NOTHROW(msg.sendable());
     }
 }

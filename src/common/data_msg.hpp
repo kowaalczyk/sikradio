@@ -16,29 +16,25 @@ namespace {
 
     uint64_t htonll(uint64_t value) {
         if (*reinterpret_cast<const char *>(&num) == num) {
-            return num;  // little endian
-        } else {  // big endian
+            // host is little endian (different than network)
             const uint32_t high_part = htonl(static_cast<uint32_t>(value >> 32));
             const uint32_t low_part = htonl(static_cast<uint32_t>(value & 0xFFFFFFFFLL));
             return (static_cast<uint64_t>(low_part) << 32) | high_part;
+        } else {
+            // host is big endian (same as network)
+            return value;
         }
-        // if (*reinterpret_cast<const sikradio::common::msg_id_t *>(&num) == num) {
-            // const uint32_t high_part = htonl(static_cast<uint32_t>(value >> 32));
-            // const uint32_t low_part = htonl(static_cast<uint32_t>(value & 0xFFFFFFFFLL));
-
-            // return (static_cast<uint64_t>(low_part) << 32) | high_part;
-        // } else {
-        //     return value;
-        // }
     }
 
     uint64_t ntohll(uint64_t value) {
         if (*reinterpret_cast<const char *>(&num) == num) {
-            return num;  // little endian
-        } else {  // big endian
-            const uint32_t low_part = ntohl(static_cast<uint32_t>(value >> 32));
-            const uint32_t high_part = ntohl(static_cast<uint32_t>(value & 0xFFFFFFFFLL));
-            return (static_cast<uint64_t>(high_part) << 32 | low_part);
+            // host is little endian (different than network)
+            const uint32_t high_part = ntohl(static_cast<uint32_t>(value >> 32));
+            const uint32_t low_part = ntohl(static_cast<uint32_t>(value & 0xFFFFFFFFLL));
+            return (static_cast<uint64_t>(low_part) << 32 | high_part);
+        } else {
+            // host is big endian (same as network)
+            return value;
         }
     }
 }
@@ -66,20 +62,21 @@ namespace sikradio::common {
                                                                  session_id{std::optional<msg_id_t>(session_id)}, 
                                                                  data{std::optional<msg_t>(std::move(data))} {}
         
-        data_msg(const sikradio::common::byte_t *raw_msg) {
-            msg_id_t id;
+        data_msg(const sikradio::common::msg_t &raw_msg) {
             msg_id_t session_id;
+            msg_id_t id;
             msg_t data;
 
-            memcpy(&id, raw_msg, sizeof(msg_id_t));
-            id = ntohll(id);
-            memcpy(&session_id, raw_msg+sizeof(msg_id_t), sizeof(msg_id_t));
+            memcpy(&session_id, raw_msg.data(), sizeof(msg_id_t));
             session_id = ntohll(session_id);
-            data.assign(raw_msg + 2*sizeof(msg_id_t), raw_msg + sizeof(raw_msg) - 2*sizeof(msg_id_t) - 1);
+            memcpy(&id, raw_msg.data()+sizeof(msg_id_t), sizeof(msg_id_t));
+            id = ntohll(id);
+            std::copy(raw_msg.data() + 2*sizeof(msg_id_t), raw_msg.data()+sizeof(raw_msg), std::back_inserter(data));
+            // data.assign(raw_msg + 2*sizeof(msg_id_t), raw_msg + sizeof(raw_msg) - 2*sizeof(msg_id_t) - 1);
 
             this->id = id;
-            this->session_id = std::optional<msg_id_t>(session_id);
-            this->data = std::optional<msg_t>(data);
+            this->session_id = std::make_optional(session_id);
+            this->data = std::make_optional(data);
         }
 
         void set_data(msg_t data) {

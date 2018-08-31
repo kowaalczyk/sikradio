@@ -25,22 +25,22 @@ test/build/test_main.o: test/test_main.cpp
 	mkdir test/build > /dev/null 2>&1
 	$(COMPILER) $(PRE_FLAGS) $< -c -o $@
 
-test-common: test/build/test_main.o
+test-common: test/build/test_main.o clean
 	$(COMPILER) $(PRE_FLAGS) $(COMMON_TESTS) $< -o $@
 	./$@ $(CATCH_TEST_FLAGS)
 	rm -f $@
 
-test-sender: test/build/test_main.o
+test-sender: test/build/test_main.o clean
 	$(COMPILER) $(PRE_FLAGS) $(SENDER_TESTS) $< -o $@
 	./$@ $(CATCH_TEST_FLAGS)
 	rm -f $@
 
-test-receiver: test/build/test_main.o
+test-receiver: test/build/test_main.o clean
 	$(COMPILER) $(PRE_FLAGS) $(RECEIVER_TESTS) $< -o $@
 	./$@ $(CATCH_TEST_FLAGS)
 	rm -f $@
 
-test-all: test/build/test_main.o
+test-all: test/build/test_main.o clean
 	$(COMPILER) $(PRE_FLAGS) $(COMMON_TESTS) $(SENDER_TESTS) $(RECEIVER_TESTS) $< -o $@
 	./$@ $(CATCH_TEST_FLAGS)
 	rm -f $@
