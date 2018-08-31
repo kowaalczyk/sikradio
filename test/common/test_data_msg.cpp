@@ -53,7 +53,7 @@ TEST_CASE("data message construction") {
     }
 }
 
-TEST_CASE("comparison of messages") {
+TEST_CASE("comparison of data messages") {
     sikradio::common::msg_id_t smaller_id = 8;
     sikradio::common::msg_id_t bigger_id = 10;
 

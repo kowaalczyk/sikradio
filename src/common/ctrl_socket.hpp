@@ -76,7 +76,7 @@ namespace sikradio::common {
             std::scoped_lock{read_mut};
             struct sockaddr_in sender_address{};
             auto rcva_len = (socklen_t) sizeof(sender_address);
-            char buffer[UDP_DATAGRAM_DATA_LEN_MAX];
+            char buffer[UDP_DATAGRAM_DATA_LEN_MAX];  // TODO: Allocate once
             ssize_t len = recvfrom(
                 sock, 
                 (void *) buffer, 
