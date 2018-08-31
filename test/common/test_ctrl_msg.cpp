@@ -4,7 +4,7 @@
 #include "../../src/common/types.hpp"
 #include "../../src/common/ctrl_msg.hpp"
 
-TEST_CASE("message construction") {
+TEST_CASE("control message construction") {
     SECTION("lookup messsage") {
         auto msg = sikradio::common::make_lookup();
 

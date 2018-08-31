@@ -7,10 +7,12 @@
 #include <utility>
 #include <cstring>
 #include <string>
-#include <cassert>
 #include <netinet/in.h>
 
+#include "exceptions.hpp"
 #include "types.hpp"
+
+using ctrl_msg_exception = sikradio::common::exceptions::ctrl_msg_exception;
 
 namespace sikradio::common {
     namespace {
@@ -42,7 +44,7 @@ namespace sikradio::common {
         }
 
         std::vector<sikradio::common::msg_id_t> get_rexmit_ids() const {
-            assert(is_rexmit());
+            if (!is_rexmit()) throw ctrl_msg_exception("Trying to read rexmit ids from non-rexmit message");
 
             std::string searchable(msg_data.begin()+(rexmit_msg_key.length()-1), msg_data.end());
             searchable[0] = ',';  // now all valid numbers will be preceeded by a comma
@@ -66,7 +68,8 @@ namespace sikradio::common {
         }
 
         std::tuple<std::string, std::string, in_port_t> get_reply_data() const {
-            assert(is_reply());
+            if (!is_reply()) throw ctrl_msg_exception("Trying to read reply data from a non-reply message");
+            
             std::string addr;
             std::string name;
             in_port_t port;

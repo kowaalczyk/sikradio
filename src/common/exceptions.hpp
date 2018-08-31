@@ -5,16 +5,32 @@
 #include <exception>
 
 namespace sikradio::common::exceptions {
-    class socket_exception : public std::exception {
+    class base_exception : public std::exception {
     private:
-        const std::string msg_str;
+        std::string msg_str;
 
     public:
-        explicit socket_exception(std::string msg_str) : msg_str(std::move(msg_str)) {}
+        explicit base_exception(std::string msg_str) : msg_str(std::move(msg_str)) {}
+        explicit base_exception(std::string&& msg_str) : msg_str(msg_str) {}
 
         const char *what() const noexcept override {
             return msg_str.c_str();
         }
+    };
+
+    class socket_exception : public base_exception {
+    public:
+        explicit socket_exception(std::string msg_str) : base_exception(msg_str) {}
+    };
+
+    class ctrl_msg_exception : public base_exception {
+    public:
+        explicit ctrl_msg_exception(std::string msg_str) : base_exception(msg_str) {}
+    };
+
+    class data_msg_exception : public base_exception {
+    public:
+        explicit data_msg_exception(std::string msg_str) : base_exception(msg_str) {}
     };
 }
 

@@ -1,32 +1,45 @@
 #ifndef SIKRADIO_COMMON_INTERNAL_MSG_HPP
 #define SIKRADIO_COMMON_INTERNAL_MSG_HPP
 
-
 #include <optional>
 #include <utility>
 #include <netinet/in.h>
 #include <cstring>
-#include <cassert>
 
+#include "exceptions.hpp"
 #include "types.hpp"
 
-namespace {
-    uint64_t htonll(uint64_t value) {
-        static const int num = 2137;
+using data_msg_exception = sikradio::common::exceptions::data_msg_exception;
 
-        if (*reinterpret_cast<const sikradio::common::msg_id_t *>(&num) == num) {
+namespace {
+    static const int num = 2137;
+
+    uint64_t htonll(uint64_t value) {
+        if (*reinterpret_cast<const char *>(&num) == num) {
+            return num;  // little endian
+        } else {  // big endian
             const uint32_t high_part = htonl(static_cast<uint32_t>(value >> 32));
             const uint32_t low_part = htonl(static_cast<uint32_t>(value & 0xFFFFFFFFLL));
-
             return (static_cast<uint64_t>(low_part) << 32) | high_part;
-        } else {
-            return value;
         }
+        // if (*reinterpret_cast<const sikradio::common::msg_id_t *>(&num) == num) {
+            // const uint32_t high_part = htonl(static_cast<uint32_t>(value >> 32));
+            // const uint32_t low_part = htonl(static_cast<uint32_t>(value & 0xFFFFFFFFLL));
+
+            // return (static_cast<uint64_t>(low_part) << 32) | high_part;
+        // } else {
+        //     return value;
+        // }
     }
 
     uint64_t ntohll(uint64_t value) {
-        // TODO
-        return 0;
+        if (*reinterpret_cast<const char *>(&num) == num) {
+            return num;  // little endian
+        } else {  // big endian
+            const uint32_t low_part = ntohl(static_cast<uint32_t>(value >> 32));
+            const uint32_t high_part = ntohl(static_cast<uint32_t>(value & 0xFFFFFFFFLL));
+            return (static_cast<uint64_t>(high_part) << 32 | low_part);
+        }
     }
 }
 
@@ -63,7 +76,7 @@ namespace sikradio::common {
             memcpy(&session_id, raw_msg+sizeof(msg_id_t), sizeof(msg_id_t));
             session_id = ntohll(session_id);
             data.assign(raw_msg + 2*sizeof(msg_id_t), raw_msg + sizeof(raw_msg) - 2*sizeof(msg_id_t) - 1);
-            
+
             this->id = id;
             this->session_id = std::optional<msg_id_t>(session_id);
             this->data = std::optional<msg_t>(data);
@@ -90,7 +103,11 @@ namespace sikradio::common {
         }
 
         msg_t sendable() const {
-            assert(session_id.has_value() && data.has_value());
+            if (!session_id.has_value())
+                throw data_msg_exception("Trying to make message sendable without session id");
+
+            if (!data.has_value())
+                throw data_msg_exception("Trying to make message sendable without data");
 
             auto net_session_id = htonll(session_id.value());
             auto net_id = htonll(id);
@@ -122,6 +139,5 @@ namespace sikradio::common {
         }
     };
 }
-
 
 #endif //SIKRADIO_COMMON_INTERNAL_MSG_HPP
