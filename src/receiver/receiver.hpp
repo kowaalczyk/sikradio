@@ -180,9 +180,6 @@ namespace sikradio::receiver {
             data_mut{} {}
 
         void run() {
-            std::promise<void> complete;
-            std::shared_future<void> sc_future(complete.get_future());
-
             std::thread resetter(&receiver::run_playback_resetter, this);
             std::thread ctrl_receiver(&receiver::run_ctrl_receiver, this);
             std::thread lookup_sender(&receiver::run_lookup_sender, this);

@@ -5,7 +5,7 @@ ifeq ($(debug), true)
 	POST_FLAGS = -lpthread -lboost_program_options
 	COMMON_TESTS = test/common/test_ctrl_msg.cpp test/common/test_data_msg.cpp
 	SENDER_TESTS = test/sender/test_lockable_cache.cpp test/sender/test_lockable_queue.cpp
-	RECEIVER_TESTS = test/receiver/test_buffer.cpp
+	RECEIVER_TESTS = test/receiver/test_buffer.cpp test/receiver/test_data_socket.cpp
 	CATCH_TEST_FLAGS = -r compact
 else
 	COMPILER = g++

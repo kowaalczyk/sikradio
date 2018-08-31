@@ -69,7 +69,9 @@ namespace sikradio::receiver {
         }
 
         std::optional<sikradio::common::data_msg> try_read() {
-            sikradio::common::byte_t buffer[UDP_DATAGRAM_DATA_LEN_MAX];
+            if (sock == -1) return std::nullopt;
+
+            sikradio::common::byte_t buffer[UDP_DATAGRAM_DATA_LEN_MAX];  // TODO: Allocate once
             ssize_t len = read(sock, &buffer, sizeof(buffer));
             if (len < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {  
