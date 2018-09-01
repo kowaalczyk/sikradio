@@ -12,9 +12,11 @@ namespace sikradio::receiver {
         sikradio::common::msg_id_t id;
         std::chrono::system_clock::time_point scheduled_update;
 
+        explicit rexmit_id(sikradio::common::msg_id_t id) : 
+                id{id}, scheduled_update{std::chrono::system_clock::now()} {}
+
         rexmit_id(sikradio::common::msg_id_t id, std::chrono::system_clock::time_point scheduled_update) : 
-            id{id}, 
-            scheduled_update{scheduled_update} {}
+                id{id}, scheduled_update{scheduled_update} {}
 
         bool operator>(const rexmit_id& other) const {return id > other.id;}
         bool operator>=(const rexmit_id& other) const {return id >= other.id;}
@@ -28,12 +30,13 @@ namespace sikradio::receiver {
         std::mutex mut{};
         std::set<rexmit_id> rexmit_ids{};
         std::chrono::system_clock::time_point last_update = std::chrono::system_clock::now();
-        std::chrono::system_clock::duration rtime{std::chrono::seconds(5)};
+        std::chrono::system_clock::duration rtime;
 
     public:
-        rexmit_manager() = default;
+        rexmit_manager() = delete;
         rexmit_manager(const rexmit_manager& other) = delete;
         rexmit_manager(rexmit_manager&& other) = delete;
+        explicit rexmit_manager(size_t rtime_seconds) : rtime{std::chrono::seconds(rtime_seconds)} {}
 
         void append_ids(sikradio::common::msg_id_t begin, sikradio::common::msg_id_t end) {
             std::scoped_lock{mut};
@@ -46,16 +49,24 @@ namespace sikradio::receiver {
 
         std::set<sikradio::common::msg_id_t> filter_get_ids(std::set<sikradio::common::msg_id_t> ids_to_forget) {
             std::scoped_lock{mut};
-
+            // remove ids to forget from rexmit ids
+            for (auto it = ids_to_forget.begin(); it != ids_to_forget.end(); it++) {
+                rexmit_ids.erase(rexmit_id(*it));
+            }
+            // get ids scheduled to update between previous call and this one
             std::set<sikradio::common::msg_id_t> ids_to_update;
             auto this_update = std::chrono::system_clock::now();
             auto next_update = this_update + rtime;
             for (auto it = rexmit_ids.begin(); it != rexmit_ids.end(); /* update in body */) {
+                if (it->scheduled_update > this_update) {
+                    it++;
+                    continue;
+                }
+                // id will be returned, next update has to be scheduled now
+                auto id_to_rexmit = it->id;
                 it = rexmit_ids.erase(it);
-                if (ids_to_forget.find(it->id) != ids_to_forget.end()) continue;
-                // if id was not to be forget, we need to schedule next rexmit and insert it back
-                ids_to_update.emplace(it->id);
-                rexmit_ids.emplace_hint(it, it->id, next_update);
+                ids_to_update.emplace(id_to_rexmit);
+                rexmit_ids.emplace_hint(it, id_to_rexmit, next_update);
             }
             return ids_to_update;
         }

@@ -1,8 +1,12 @@
 #include "catch.hpp"
 
+#include <set>
+#include <thread>
+
 #include "../src/receiver/buffer.hpp"
 #include "../src/common/data_msg.hpp"
 #include "../src/receiver/data_socket.hpp"
+#include "../src/receiver/rexmit_manager.hpp"
 
 namespace {
     const std::string msg_data = "some random message data";
@@ -115,15 +119,74 @@ TEST_CASE("buffer space management") {
     }
 }
 
-TEST_CASE("receiver data socket construction") {
+TEST_CASE("data socket construction") {
     REQUIRE_NOTHROW(sikradio::receiver::data_socket());
     REQUIRE_NOTHROW(sikradio::receiver::data_socket(9999));
 }
 
-TEST_CASE("receiver data socket not connected") {
+TEST_CASE("data socket not connected") {
     SECTION("returns null") {
         sikradio::receiver::data_socket sock{};
 
         REQUIRE(sock.try_read() == std::nullopt);
+    }
+}
+
+TEST_CASE("rexmit manager construction") {
+    REQUIRE_NOTHROW(sikradio::receiver::rexmit_manager(10));
+}
+
+TEST_CASE("rexmit manager access") {
+    size_t rtime = 1;  // in seconds
+    sikradio::receiver::rexmit_manager mng{rtime};
+    std::set<sikradio::common::msg_id_t> empty_set;
+    
+    SECTION("returns empty set when no ids were inserted") {
+        REQUIRE(mng.filter_get_ids(empty_set).empty());
+    }
+
+    SECTION("before rtime returns empty set after id is inserted") {
+        mng.append_ids(2, 3);
+
+        auto rexmit_set = mng.filter_get_ids(empty_set);
+        REQUIRE(rexmit_set.empty());
+    }
+
+    SECTION("after rtime returns set with inserted id") {
+        mng.append_ids(2, 3);
+        std::this_thread::sleep_for(std::chrono::seconds(rtime));
+        
+        auto rexmit_set = mng.filter_get_ids(empty_set);
+        REQUIRE(rexmit_set.find(2) == rexmit_set.begin());
+    }
+
+    SECTION("after rtime and reset returns empty set") {
+        mng.append_ids(2,3);
+        std::set<sikradio::common::msg_id_t> forget_inserted_ids = {2};
+        std::this_thread::sleep_for(std::chrono::seconds(rtime));
+        mng.reset();
+
+        auto rexmit_set = mng.filter_get_ids(forget_inserted_ids);
+        REQUIRE(rexmit_set.empty());
+    }
+
+    SECTION("after rtime forgotten inserted id is not returned") {
+        mng.append_ids(2,3);
+        std::set<sikradio::common::msg_id_t> forget_inserted_ids = {2};
+
+        SECTION("when forgotten immediately") {
+            (void)mng.filter_get_ids(forget_inserted_ids);
+            std::this_thread::sleep_for(std::chrono::seconds(rtime));
+
+            auto rexmit_set = mng.filter_get_ids(empty_set);
+            REQUIRE(rexmit_set.empty());
+        }
+
+        SECTION("when forgotten after rtime") {
+            std::this_thread::sleep_for(std::chrono::seconds(rtime));
+
+            auto rexmit_set = mng.filter_get_ids(forget_inserted_ids);
+            REQUIRE(rexmit_set.empty());
+        }
     }
 }

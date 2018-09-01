@@ -174,7 +174,7 @@ namespace sikradio::receiver {
             ctrl_socket{ctrl_port},
             // ui_socket{ui_port},  // TODO: Implement
             station_set{preferred_station},
-            rexmit_manager{},
+            rexmit_manager{rtime},
             state_manager{},
             // client_manager{},  // TODO: Implement
             data_mut{} {}
