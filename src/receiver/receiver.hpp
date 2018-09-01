@@ -113,7 +113,7 @@ namespace sikradio::receiver {
                 if (!msg.has_value()) continue;
 
                 auto msg_session_id = msg.value().get_session_id();
-                auto ignore_msg = state_manager.register_session(msg_session_id);
+                auto ignore_msg = state_manager.register_session_check_ignore(msg_session_id);
                 if (ignore_msg) continue;
 
                 auto msg_id = msg.value().get_id();

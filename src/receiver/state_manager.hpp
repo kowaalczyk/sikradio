@@ -39,8 +39,7 @@ namespace sikradio::receiver {
             }
         }
 
-        /// returns bool : ignore_session
-        bool register_session(sikradio::common::msg_id_t new_session_id) {
+        bool register_session_check_ignore(sikradio::common::msg_id_t new_session_id) {
             std::scoped_lock{mut};
 
             if (new_session_id < session_id) return true;

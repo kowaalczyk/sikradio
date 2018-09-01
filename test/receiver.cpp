@@ -1,12 +1,14 @@
 #include "catch.hpp"
 
 #include <set>
+#include <tuple>
 #include <thread>
 
 #include "../src/receiver/buffer.hpp"
 #include "../src/common/data_msg.hpp"
 #include "../src/receiver/data_socket.hpp"
 #include "../src/receiver/rexmit_manager.hpp"
+#include "../src/receiver/state_manager.hpp"
 
 namespace {
     const std::string msg_data = "some random message data";
@@ -18,10 +20,6 @@ namespace {
             sikradio::common::msg_t(msg_data.begin(), msg_data.end())
         );
     }
-}
-
-TEST_CASE("buffer construction") {
-    REQUIRE_NOTHROW(sikradio::receiver::buffer(10));
 }
 
 TEST_CASE("buffer access") {
@@ -132,10 +130,6 @@ TEST_CASE("data socket not connected") {
     }
 }
 
-TEST_CASE("rexmit manager construction") {
-    REQUIRE_NOTHROW(sikradio::receiver::rexmit_manager(10));
-}
-
 TEST_CASE("rexmit manager access") {
     size_t rtime = 1;  // in seconds
     sikradio::receiver::rexmit_manager mng{rtime};
@@ -187,6 +181,92 @@ TEST_CASE("rexmit manager access") {
 
             auto rexmit_set = mng.filter_get_ids(forget_inserted_ids);
             REQUIRE(rexmit_set.empty());
+        }
+    }
+}
+
+TEST_CASE("state manager check") {
+    sikradio::receiver::state_manager sm;
+    std::optional<std::string> addr;
+    bool dirty;
+
+    SECTION("after construction") {
+        std::tie(addr, dirty) = sm.check_state();
+        
+        REQUIRE_FALSE(dirty);
+        REQUIRE_FALSE(addr.has_value());
+    }
+
+    SECTION("after mark dirty") {
+        sm.mark_dirty();
+        std::tie(addr, dirty) = sm.check_state();
+
+        REQUIRE(dirty);
+        REQUIRE_FALSE(addr.has_value());
+    }
+
+    SECTION("after address registration") {
+        std::string reg_addr = "239.10.11.12";
+        sm.register_address(reg_addr);
+
+        SECTION("is dirty with correct address") {
+            std::tie(addr, dirty) = sm.check_state();
+            
+            REQUIRE(dirty);
+            REQUIRE(addr == reg_addr);
+        }
+
+        SECTION("is not dirty after check") {
+            (void)sm.check_state();
+            std::tie(addr, dirty) = sm.check_state();
+
+            REQUIRE_FALSE(dirty);
+        }
+
+        SECTION("persists correct address on consecutive checks") {
+            std::tie(addr, dirty) = sm.check_state();
+            REQUIRE(addr == reg_addr);
+
+            std::tie(addr, dirty) = sm.check_state();
+            REQUIRE(addr == reg_addr);
+        }
+
+        SECTION("is not dirty after re-registration of same address") {
+            (void)sm.check_state();
+            sm.register_address(reg_addr);
+            std::tie(addr, dirty) = sm.check_state();
+
+            REQUIRE_FALSE(dirty);
+            REQUIRE(addr == reg_addr);
+        }
+    }
+
+    SECTION("after session registration ") {
+        (void)sm.register_session_check_ignore(5);
+        (void)sm.check_state();
+
+        SECTION("to higher session") {
+            bool ignore = sm.register_session_check_ignore(6);
+            std::tie(std::ignore, dirty) = sm.check_state();
+
+            REQUIRE(ignore);
+            REQUIRE(dirty);
+        }
+
+        SECTION("to equal session") {
+            bool ignore = sm.register_session_check_ignore(5);
+            std::tie(std::ignore, dirty) = sm.check_state();
+
+            REQUIRE_FALSE(ignore);
+            REQUIRE_FALSE(dirty);
+        }
+
+        SECTION("to lower session") {
+            bool ignore = sm.register_session_check_ignore(4);
+            std::tie(std::ignore, dirty) = sm.check_state();
+
+            REQUIRE(ignore);
+            REQUIRE_FALSE(dirty);
         }
     }
 }
