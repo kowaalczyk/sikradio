@@ -1,16 +1,19 @@
-#include "../catch.hpp"
+#include "catch.hpp"
 
-#include "../../src/receiver/buffer.hpp"
-#include "../../src/common/data_msg.hpp"
+#include "../src/receiver/buffer.hpp"
+#include "../src/common/data_msg.hpp"
+#include "../src/receiver/data_socket.hpp"
 
-const std::string msg_data = "some random message data";
+namespace {
+    const std::string msg_data = "some random message data";
 
-sikradio::common::data_msg msg(sikradio::common::msg_id_t id) {
-    return sikradio::common::data_msg(
-        id, 
-        42, 
-        sikradio::common::msg_t(msg_data.begin(), msg_data.end())
-    );
+    sikradio::common::data_msg msg(sikradio::common::msg_id_t id) {
+        return sikradio::common::data_msg(
+            id, 
+            42, 
+            sikradio::common::msg_t(msg_data.begin(), msg_data.end())
+        );
+    }
 }
 
 TEST_CASE("buffer construction") {
@@ -109,5 +112,18 @@ TEST_CASE("buffer space management") {
                 REQUIRE_FALSE(buf.has_space_for(id));
             }
         }
+    }
+}
+
+TEST_CASE("receiver data socket construction") {
+    REQUIRE_NOTHROW(sikradio::receiver::data_socket());
+    REQUIRE_NOTHROW(sikradio::receiver::data_socket(9999));
+}
+
+TEST_CASE("receiver data socket not connected") {
+    SECTION("returns null") {
+        sikradio::receiver::data_socket sock{};
+
+        REQUIRE(sock.try_read() == std::nullopt);
     }
 }

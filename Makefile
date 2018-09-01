@@ -3,9 +3,6 @@ ifeq ($(debug), true)
 	COMPILER = g++-7
 	PRE_FLAGS = -std=c++17 -Wall -Werror -g
 	POST_FLAGS = -lpthread -lboost_program_options
-	COMMON_TESTS = test/common/test_ctrl_msg.cpp test/common/test_data_msg.cpp
-	SENDER_TESTS = test/sender/test_lockable_cache.cpp test/sender/test_lockable_queue.cpp
-	RECEIVER_TESTS = test/receiver/test_buffer.cpp test/receiver/test_data_socket.cpp
 	CATCH_TEST_FLAGS = -r compact
 else
 	COMPILER = g++
@@ -26,19 +23,15 @@ test/build/test_main.o: test/test_main.cpp
 	$(COMPILER) $(PRE_FLAGS) $< -c -o $@
 
 test-common: test/build/test_main.o clean
-	$(COMPILER) $(PRE_FLAGS) $(COMMON_TESTS) $< -o $@
+	$(COMPILER) $(PRE_FLAGS) test/common.cpp $< -o $@
 	- ./$@ $(CATCH_TEST_FLAGS)
 
 test-sender: test/build/test_main.o clean
-	$(COMPILER) $(PRE_FLAGS) $(SENDER_TESTS) $< -o $@
+	$(COMPILER) $(PRE_FLAGS) test/sender.cpp $< -o $@
 	- ./$@ $(CATCH_TEST_FLAGS)
 
 test-receiver: test/build/test_main.o clean
-	$(COMPILER) $(PRE_FLAGS) $(RECEIVER_TESTS) $< -o $@
-	- ./$@ $(CATCH_TEST_FLAGS)
-
-test-all: test/build/test_main.o clean
-	$(COMPILER) $(PRE_FLAGS) $(COMMON_TESTS) $(SENDER_TESTS) $(RECEIVER_TESTS) $< -o $@
+	$(COMPILER) $(PRE_FLAGS) $< test/receiver.cpp -o $@
 	- ./$@ $(CATCH_TEST_FLAGS)
 
 .PHONY: clean
