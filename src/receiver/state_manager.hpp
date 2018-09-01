@@ -14,7 +14,7 @@ namespace sikradio::receiver {
     private:
         std::mutex mut{};
         std::optional<std::string> multicast_address{std::nullopt};
-        std::atomic_bool dirty{true};
+        std::atomic_bool dirty{false};
         sikradio::common::msg_id_t session_id{0};
 
     public:

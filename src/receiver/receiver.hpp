@@ -47,7 +47,8 @@ namespace sikradio::receiver {
                     std::scoped_lock{data_mut};  // stops data receiver TODO: Make sure there is no deadlock
                     buffer.reset();
                     rexmit_manager.reset();
-                    data_socket.connect(multicast_address.value());
+                    if (multicast_address.has_value())
+                        data_socket.connect(multicast_address.value());
                 }
                 std::this_thread::sleep_for(reset_check_freq);
             }
