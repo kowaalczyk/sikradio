@@ -51,6 +51,15 @@ namespace sikradio::common {
                 &broadcast, 
                 sizeof(broadcast));
             if (err < 0) close_and_throw();
+            // reuse address if necessary
+            int enable = 1;
+            err = setsockopt(
+                sock, 
+                SOL_SOCKET, 
+                SO_REUSEADDR, 
+                &enable, 
+                sizeof(enable));
+            if (err < 0) close_and_throw();                
             // set timeout to prevent deadlocks
             struct timeval tv{
                     .tv_sec = 1,
@@ -77,6 +86,7 @@ namespace sikradio::common {
             struct sockaddr_in sender_address{};
             auto rcva_len = (socklen_t) sizeof(sender_address);
             char buffer[UDP_DATAGRAM_DATA_LEN_MAX];  // TODO: Allocate once
+            memset(buffer, 0, UDP_DATAGRAM_DATA_LEN_MAX);
             ssize_t len = recvfrom(
                 sock, 
                 (void *) buffer, 
@@ -93,6 +103,8 @@ namespace sikradio::common {
                     throw socket_exception(strerror(errno));
                 }
             }
+            // std::cerr << "received ctrl: '" << buffer << "'" << std::endl;
+
             sikradio::common::ctrl_msg msg(std::string(buffer, buffer+len));
             return std::make_optional(std::make_tuple(msg, sender_address));
         }
@@ -110,16 +122,8 @@ namespace sikradio::common {
             if (snd_len < 0) throw socket_exception(strerror(errno));
             if (snd_len != static_cast<ssize_t>(data_len)) 
                 throw socket_exception("Failed to send entire response");
-        }
 
-        void send_to(std::string address, in_port_t port, sikradio::common::ctrl_msg msg) {
-            struct sockaddr_in remote_addr{
-                .sin_family=AF_INET,
-                .sin_port=htons(port)
-            };
-            int err = inet_aton(address.data(), &remote_addr.sin_addr);
-            if (err == 0) throw socket_exception("Invalid address passed to inet_aton");
-            send_to(remote_addr, msg);
+            // std::cerr << "sent ctrl successfully" << std::endl;
         }
 
         void force_send_to(const struct sockaddr_in& destination, sikradio::common::ctrl_msg msg) {
@@ -129,6 +133,7 @@ namespace sikradio::common {
                     break;
                 } catch (socket_exception &e) {
                     // retry
+                    // std::cerr << e.what() << std::endl;
                 }
             }
         }

@@ -22,6 +22,11 @@ namespace sikradio::common::exceptions {
         explicit socket_exception(std::string msg_str) : base_exception(std::move(msg_str)) {}
     };
 
+    class address_exception : public base_exception {
+    public:
+        explicit address_exception(std::string msg_str) : base_exception(std::move(msg_str)) {}
+    };
+
     class ctrl_msg_exception : public base_exception {
     public:
         explicit ctrl_msg_exception(std::string msg_str) : base_exception(std::move(msg_str)) {}

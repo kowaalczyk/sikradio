@@ -67,10 +67,12 @@ namespace sikradio::sender {
                 sikradio::common::ctrl_msg msg{std::get<0>(req.value())};
                 struct sockaddr_in sender{std::get<1>(req.value())};
                 if (msg.is_lookup()) {
+                    // std::cerr << "lookup" << std::endl;
                     auto reply = sikradio::common::make_reply(NAME, MCAST_ADDR, DATA_PORT);
                     sock.force_send_to(sender, reply);
                 }
                 if (msg.is_rexmit()) {
+                    // std::cerr << "rexmit" << std::endl;
                     retransmit_ids(msg.get_rexmit_ids());
                 }
             }
@@ -129,7 +131,9 @@ namespace sikradio::sender {
             std::thread listener(&transmitter::run_listener, this, sc_future);
             std::thread retransmitter(&transmitter::run_retransmitter, this, sc_future);
 
-            read_input();
+            std::thread reader(&transmitter::read_input, this);
+            
+            reader.join();
             reading_complete.set_value();
 
             listener.join();

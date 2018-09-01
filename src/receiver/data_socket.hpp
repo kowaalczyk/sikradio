@@ -72,6 +72,7 @@ namespace sikradio::receiver {
             if (sock == -1) return std::nullopt;
 
             sikradio::common::byte_t buffer[UDP_DATAGRAM_DATA_LEN_MAX];  // TODO: Allocate once
+            memset(buffer, 0, UDP_DATAGRAM_DATA_LEN_MAX);
             ssize_t len = read(sock, &buffer, sizeof(buffer));
             if (len < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {  

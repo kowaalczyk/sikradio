@@ -8,9 +8,11 @@
 #include <atomic>
 #include <future>
 #include <csignal>
+#include <iostream>
 
 #include "../common/ctrl_socket.hpp"
 #include "../common/ctrl_msg.hpp"
+#include "../common/address_helpers.hpp"
 #include "buffer.hpp"
 #include "data_socket.hpp"
 #include "station_set.hpp"
@@ -64,9 +66,13 @@ namespace sikradio::receiver {
                 std::tie(msg, sender_addr) = rcv.value();
                 if (!msg.is_reply()) continue;
                 
+                std::cerr << "reply received" << std::endl;
+
                 auto station = sikradio::receiver::as_station(msg, sender_addr);
+                std::cerr << "name in struct: '" << station.name << "'" << std::endl;
                 auto new_selected = station_set.update_get_selected(station);
                 if (!new_selected.has_value()) continue;
+                std::cerr << "name selected: " << "'" << new_selected.value().name << "'" << std::endl;
                 state_manager.register_address(new_selected.value().data_address);
             }
         }
@@ -74,7 +80,11 @@ namespace sikradio::receiver {
         void run_lookup_sender() {  // LOCKS: 1
             while(true) {
                 auto msg = sikradio::common::make_lookup();
-                ctrl_socket.send_to(discover_addr, ctrl_port, msg);
+                auto da_struct = sikradio::common::make_address(discover_addr, ctrl_port);
+                ctrl_socket.force_send_to(da_struct, msg);
+
+                std::cerr << "lookup sent" << std::endl;
+
                 std::this_thread::sleep_for(lookup_freq);
             }
         }
@@ -97,10 +107,12 @@ namespace sikradio::receiver {
                 auto current_station = station_set.get_selected();
                 if (!current_station.has_value()) continue;
                 
-                ctrl_socket.send_to(
-                    current_station.value().ctrl_address, 
-                    current_station.value().ctrl_port,
-                    msg);
+                std::cerr << "preparing rexmit: '" << current_station.value().name << "'" << std::endl;
+                auto addr = sikradio::common::make_address(
+                    current_station.value().ctrl_address,
+                    current_station.value().ctrl_port
+                );
+                ctrl_socket.send_to(addr, msg);
             }
         }
 
@@ -115,6 +127,8 @@ namespace sikradio::receiver {
                 auto msg_session_id = msg.value().get_session_id();
                 auto ignore_msg = state_manager.register_session_check_ignore(msg_session_id);
                 if (ignore_msg) continue;
+
+                std::cerr << "got message" << std::endl;
 
                 auto msg_id = msg.value().get_id();
                 if (max_msg_id.has_value() && max_msg_id.value() + 1 != msg_id)
