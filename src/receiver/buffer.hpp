@@ -56,6 +56,8 @@ namespace sikradio::receiver {
 
     public:
         buffer() = delete;
+        buffer(const buffer& other) = delete;
+        buffer(buffer&& other) = delete;
         explicit buffer(size_t max_elements) : max_elements(max_elements) {}
 
         void write(const sikradio::common::data_msg &msg) {

@@ -63,6 +63,8 @@ namespace sikradio::receiver {
 
     public:
         station_set() = default;
+        station_set(const station_set& other) = delete;
+        station_set(station_set&& other) = delete;
 
         explicit station_set(std::string preferred_station_name) {
             this->preferred_station_name = std::make_optional(std::move(preferred_station_name));

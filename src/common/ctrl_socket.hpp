@@ -37,7 +37,7 @@ namespace sikradio::common {
     public:
         ctrl_socket() = delete;
         ctrl_socket(const ctrl_socket& other) = delete;
-        ctrl_socket(ctrl_socket &&other) = default;
+        ctrl_socket(ctrl_socket &&other) = delete;
 
         explicit ctrl_socket(in_port_t local_port) {
             sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);

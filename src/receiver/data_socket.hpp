@@ -36,7 +36,7 @@ namespace sikradio::receiver {
     public:
         data_socket() = default;
         data_socket(const data_socket& other) = delete;
-        data_socket(data_socket&& other) = default;
+        data_socket(data_socket&& other) = delete;
 
         explicit data_socket(in_port_t local_port) : local_port{local_port} {}
 
