@@ -9,6 +9,8 @@
 #include "../src/receiver/data_socket.hpp"
 #include "../src/receiver/rexmit_manager.hpp"
 #include "../src/receiver/state_manager.hpp"
+#include "../src/receiver/station_set.hpp"
+#include "../src/receiver/station.hpp"
 
 namespace {
     const std::string msg_data = "some random message data";
@@ -19,6 +21,26 @@ namespace {
             42, 
             sikradio::common::msg_t(msg_data.begin(), msg_data.end())
         );
+    }
+
+    sikradio::receiver::station pref() {
+        sikradio::receiver::station ret;
+        ret.name = "Preferred Station";
+        ret.ctrl_address = "192.168.5.5";
+        ret.ctrl_port = 8888;
+        ret.data_address = "239.10.11.12";
+        ret.last_reply = std::chrono::system_clock::now();
+        return ret;
+    }
+
+    sikradio::receiver::station other() {
+        sikradio::receiver::station ret;
+        ret.name = "Other Station";
+        ret.ctrl_address = "192.168.6.6";
+        ret.ctrl_port = 9999;
+        ret.data_address = "239.10.11.13";
+        ret.last_reply = std::chrono::system_clock::now();
+        return ret;
     }
 }
 
@@ -267,6 +289,91 @@ TEST_CASE("state manager check") {
 
             REQUIRE(ignore);
             REQUIRE_FALSE(dirty);
+        }
+    }
+}
+
+TEST_CASE("station set") {
+    sikradio::receiver::station_set s;
+    using msu = sikradio::receiver::menu_selection_update;
+
+    SECTION("selects") {
+        SECTION("nothing if no station was inserted") {
+            auto selected = s.select_get_selected(msu::UP);
+
+            REQUIRE_FALSE(selected.has_value());
+        }
+
+        SECTION("first inserted station") {
+            auto selected = s.update_get_selected(other());
+
+            REQUIRE(selected.value() == other());
+        }
+    }
+
+    SECTION("handles update") {
+        auto selected = s.update_get_selected(pref());
+        auto selected_2 = s.update_get_selected(other());
+        
+        REQUIRE(selected.value() == selected_2.value());
+    }
+
+    SECTION("handles selection") {
+        (void)s.update_get_selected(pref());
+        auto original = s.update_get_selected(other());
+
+        SECTION("up") {
+            auto selected = s.select_get_selected(msu::UP);
+
+            REQUIRE_FALSE(selected.value() == original.value());
+        }
+
+        SECTION("down") {
+            auto selected = s.select_get_selected(msu::DOWN);
+
+            REQUIRE_FALSE(selected.value() == original.value());
+        }
+    }
+
+    SECTION("after long inactivity") {
+        // TODO: Implement this test in case of problems
+    }
+
+    SECTION("returns printable names in correct format") {
+        (void)s.update_get_selected(pref());
+        (void)s.update_get_selected(other());
+        std::vector<std::string> names = {other().name, pref().name};
+
+        REQUIRE(s.get_station_names() == names);
+    }
+
+    SECTION("with preferred station") {
+        sikradio::receiver::station_set sp{pref().name};
+
+        SECTION("after update") {
+            SECTION("including preferred") {
+                (void)sp.update_get_selected(other());
+                auto selected = sp.update_get_selected(pref());
+
+                REQUIRE(selected == pref());
+            }
+
+            SECTION("not including preferred") {
+                (void)sp.update_get_selected(pref());
+                auto selected = sp.update_get_selected(other());
+
+                REQUIRE(selected == pref());
+            }
+        }
+
+        SECTION("after station change and update") {
+            (void)sp.update_get_selected(other());
+            (void)sp.update_get_selected(pref());
+            auto selected = sp.select_get_selected(msu::UP);
+            REQUIRE_FALSE(selected == pref());
+
+            selected = sp.update_get_selected(pref());
+            REQUIRE_FALSE(selected == pref());
         }
     }
 }

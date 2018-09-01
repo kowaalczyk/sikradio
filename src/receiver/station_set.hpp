@@ -1,7 +1,6 @@
 #ifndef SIKRADIO_RECEIVER_STATION_SET_HPP
 #define SIKRADIO_RECEIVER_STATION_SET_HPP
 
-
 #include <set>
 #include <tuple>
 #include <string>
@@ -26,7 +25,7 @@ namespace sikradio::receiver {
         std::mutex mut{};
         std::optional<std::string> preferred_station_name{std::nullopt};
         std::set<sikradio::receiver::station> stations{};
-        std::set<sikradio::receiver::station>::iterator selected_station = stations.end();
+        std::set<sikradio::receiver::station>::iterator selected_station{stations.end()};
 
         /**
          * Removes stations older than MAX_INACTIVE_SECONDS from the internal collection.
@@ -36,26 +35,26 @@ namespace sikradio::receiver {
          * If first station does not exist, internal collection is empty and no station is selected.
          */
         void remove_old_stations() {
-            std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+            auto now = std::chrono::system_clock::now();
             for (auto it = stations.begin(); it != stations.end();/*update in body*/) {
                 auto last_update = it->last_reply;
                 auto duration_from_last_update = now - last_update;
-                if (duration_from_last_update > std::chrono::seconds(MAX_INACTIVE_SECONDS)) {
-                    if (*it == *selected_station) {
-                        if (selected_station != stations.end()) selected_station++;
-                        if (selected_station == stations.end()) selected_station = stations.begin();
-                    }
-                    it = stations.erase(it);
-                } else {
+                if (duration_from_last_update <= std::chrono::seconds(MAX_INACTIVE_SECONDS)) {
                     it++;
+                    continue;
                 }
+                if (*it == *selected_station) {
+                    if (selected_station != stations.end()) 
+                        selected_station++;
+                    if (selected_station == stations.end()) 
+                        selected_station = stations.begin();
+                }
+                it = stations.erase(it);
             }
         }
 
         std::optional<sikradio::receiver::station> get_selected_station() {
             if (stations.empty()) {
-                assert(selected_station == stations.begin());
-                assert(selected_station == stations.end());
                 return std::nullopt;
             }
             return std::make_optional(*selected_station);
@@ -70,29 +69,37 @@ namespace sikradio::receiver {
             this->preferred_station_name = std::make_optional(std::move(preferred_station_name));
         }
 
-        explicit station_set(std::optional<std::string> preferred_station_name) : preferred_station_name{preferred_station_name} {}
+        explicit station_set(std::optional<std::string> preferred_station_name) : 
+                preferred_station_name{preferred_station_name} {}
 
-        std::optional<sikradio::receiver::station> update_get_selected(const sikradio::receiver::station &new_station) {
+        std::optional<sikradio::receiver::station> 
+        update_get_selected(const sikradio::receiver::station &new_station) {
             std::scoped_lock{mut};
 
             std::set<sikradio::receiver::station>::iterator new_it;
-            stations.erase(new_station);
+            size_t erased = stations.erase(new_station);
             std::tie(new_it, std::ignore) = stations.emplace(new_station);
 
             if (selected_station == stations.end()) selected_station = new_it;
-            if (preferred_station_name.has_value() && preferred_station_name.value() == new_station.name)
+            // we will only select preferred station when it appears for the 1st time
+            if (preferred_station_name.has_value() 
+                    && preferred_station_name.value() == new_station.name
+                    && erased == 0)
                 selected_station = new_it;
             remove_old_stations();
             return get_selected_station();
         }
 
-        std::optional<sikradio::receiver::station> select_get_selected(const sikradio::receiver::menu_selection_update msu) {
+        std::optional<sikradio::receiver::station> 
+        select_get_selected(const sikradio::receiver::menu_selection_update msu) {
             std::scoped_lock{mut};
             
             if (stations.empty()) return get_selected_station();
             if (msu == menu_selection_update::UP) {
-                if (std::next(selected_station) != stations.end()) selected_station++;
+                if (selected_station != stations.end()) selected_station++;
+                if (selected_station == stations.end()) selected_station = stations.begin();
             } else {
+                if (selected_station == stations.begin()) selected_station = stations.end();
                 if (selected_station != stations.begin()) selected_station--;
             }
             remove_old_stations();
@@ -104,22 +111,17 @@ namespace sikradio::receiver {
             return get_selected_station();
         }
 
-        std::vector<std::string> get_printable_station_names() {
+        std::vector<std::string> get_station_names() {
             std::scoped_lock{mut};
 
             std::vector<std::string> station_names;
             station_names.reserve(stations.size());
             for (auto it = stations.begin(); it != stations.end(); it++) {
-                std::string station_name = "";
-                if (*it == *selected_station) station_name += SELECTED_STATION_PREFIX;
-                else station_name += STATION_PREFIX;
-                station_name += it->name;
-                station_names.emplace_back(station_name);
+                station_names.emplace_back(it->name);
             }
             return station_names;
         }
     };
 }
-
 
 #endif

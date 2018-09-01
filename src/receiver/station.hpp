@@ -21,10 +21,11 @@ namespace sikradio::receiver {
         bool operator<=(const station& other) const {return name <= other.name;}
         bool operator<(const station& other) const {return name < other.name;}
         bool operator==(const station& other) const {
-            auto names_equal = (name == other.name);
-            auto address_equal = (ctrl_address == other.ctrl_address);
-            auto port_equal = (ctrl_port == other.ctrl_port);
-            return (names_equal && address_equal && port_equal);
+            bool names_equal = (name == other.name);
+            bool ca_equal = (ctrl_address == other.ctrl_address);
+            bool da_equal = (data_address == other.data_address);
+            bool port_equal = (ctrl_port == other.ctrl_port);
+            return (names_equal && da_equal && ca_equal && port_equal);
         }
     };
     typedef struct station station;
