@@ -129,9 +129,7 @@ namespace sikradio::sender {
             std::thread listener(&transmitter::run_listener, this, sc_future);
             std::thread retransmitter(&transmitter::run_retransmitter, this, sc_future);
 
-            std::thread reader(&transmitter::read_input, this);
-            
-            reader.join();
+            read_input();
             reading_complete.set_value();
 
             listener.join();
