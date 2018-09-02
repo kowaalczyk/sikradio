@@ -96,10 +96,13 @@ namespace sikradio::common {
     };
 
     ctrl_msg make_lookup() {
-        return ctrl_msg(lookup_msg_key);
+        return ctrl_msg(lookup_msg_key + "\n");
     }
 
-    ctrl_msg make_reply(const std::string &name, const std::string &mcast_addr, in_port_t data_port) {
+    ctrl_msg make_reply(
+            const std::string &name, 
+            const std::string &mcast_addr, 
+            in_port_t data_port) {
         std::string str = reply_msg_key;
         str += mcast_addr;
         str += " ";
@@ -116,9 +119,8 @@ namespace sikradio::common {
             if (it != ids.begin()) ss << ",";
             ss << std::to_string(*it);
         }
-        return ctrl_msg(rexmit_msg_key + ss.str());
+        return ctrl_msg(rexmit_msg_key + ss.str() + "\n");
     }
 }
-
 
 #endif //SIKRADIO_COMMON_CTRL_MSG_HPP

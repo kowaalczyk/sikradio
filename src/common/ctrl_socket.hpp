@@ -15,6 +15,10 @@
 #include "exceptions.hpp"
 #include "../common/ctrl_msg.hpp"
 
+#ifndef TTL_VALUE
+#define TTL_VALUE 64
+#endif
+
 #ifndef UDP_DATAGRAM_DATA_LEN_MAX
 #define UDP_DATAGRAM_DATA_LEN_MAX 65535
 #endif
@@ -39,27 +43,21 @@ namespace sikradio::common {
         ctrl_socket(const ctrl_socket& other) = delete;
         ctrl_socket(ctrl_socket &&other) = delete;
 
-        explicit ctrl_socket(in_port_t local_port) {
+        explicit ctrl_socket(
+                in_port_t local_port, 
+                bool enable_broadcast=false, 
+                bool bind_local=true) {
             sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
             if (sock < 0) throw socket_exception(strerror(errno));
-            // listen on broadcast
-            int broadcast = 1;
-            int err = setsockopt(
-                sock, 
-                SOL_SOCKET, 
-                SO_BROADCAST, 
-                &broadcast, 
-                sizeof(broadcast));
-            if (err < 0) close_and_throw();
             // reuse address if necessary
             int enable = 1;
-            err = setsockopt(
+            int err = setsockopt(
                 sock, 
                 SOL_SOCKET, 
                 SO_REUSEADDR, 
                 &enable, 
                 sizeof(enable));
-            if (err < 0) close_and_throw();                
+            if (err < 0) close_and_throw();
             // set timeout to prevent deadlocks
             struct timeval tv{
                     .tv_sec = 1,
@@ -72,13 +70,36 @@ namespace sikradio::common {
                 &tv, 
                 sizeof(tv));
             if (err < 0) close_and_throw();
-            // bind socket to local port
-            struct sockaddr_in local_addr;
-            local_addr.sin_family = AF_INET;
-            local_addr.sin_port = htons(local_port);
-            local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-            err = bind(sock, (struct sockaddr *) &local_addr, sizeof(local_addr));
-            if (err < 0) close_and_throw();
+            if (enable_broadcast) {
+                // enable broadcast
+                int broadcast = 1;
+                err = setsockopt(
+                    sock, 
+                    SOL_SOCKET, 
+                    SO_BROADCAST, 
+                    &broadcast, 
+                    sizeof(broadcast));
+                if (err < 0) close_and_throw();
+                // set TTL value
+                int ttl = TTL_VALUE;
+                err = setsockopt(
+                    sock,
+                    IPPROTO_IP,
+                    IP_MULTICAST_TTL,
+                    &ttl,
+                    sizeof(ttl)
+                );
+                if (err < 0) close_and_throw();
+            }
+            if (bind_local) {
+                // bind socket to local port
+                struct sockaddr_in local_addr;
+                local_addr.sin_family = AF_INET;
+                local_addr.sin_port = htons(local_port);
+                local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+                err = bind(sock, (struct sockaddr *) &local_addr, sizeof(local_addr));
+                if (err < 0) close_and_throw();
+            }
         }
 
         std::optional<std::tuple<sikradio::common::ctrl_msg, struct sockaddr_in>> try_read() {
@@ -103,15 +124,13 @@ namespace sikradio::common {
                     throw socket_exception(strerror(errno));
                 }
             }
-            // std::cerr << "received ctrl: '" << buffer << "'" << std::endl;
-
             sikradio::common::ctrl_msg msg(std::string(buffer, buffer+len));
             return std::make_optional(std::make_tuple(msg, sender_address));
         }
 
         void send_to(const struct sockaddr_in& destination, sikradio::common::ctrl_msg msg) {
             std::scoped_lock{write_mut};
-            auto data_len = strlen(msg.sendable().data());
+            size_t data_len = msg.sendable().size();
             ssize_t snd_len = sendto(
                 sock, 
                 msg.sendable().data(), 
@@ -122,8 +141,6 @@ namespace sikradio::common {
             if (snd_len < 0) throw socket_exception(strerror(errno));
             if (snd_len != static_cast<ssize_t>(data_len)) 
                 throw socket_exception("Failed to send entire response");
-
-            // std::cerr << "sent ctrl successfully" << std::endl;
         }
 
         void force_send_to(const struct sockaddr_in& destination, sikradio::common::ctrl_msg msg) {
@@ -133,7 +150,6 @@ namespace sikradio::common {
                     break;
                 } catch (socket_exception &e) {
                     // retry
-                    // std::cerr << e.what() << std::endl;
                 }
             }
         }

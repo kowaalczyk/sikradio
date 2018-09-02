@@ -23,6 +23,7 @@ namespace sikradio::receiver {
 
     namespace {
         const auto reset_check_freq = std::chrono::milliseconds(20);
+        const auto rexmit_check_freq = std::chrono::milliseconds(10);
         const auto lookup_freq = std::chrono::seconds(5);
     }
 
@@ -66,13 +67,9 @@ namespace sikradio::receiver {
                 std::tie(msg, sender_addr) = rcv.value();
                 if (!msg.is_reply()) continue;
                 
-                std::cerr << "reply received" << std::endl;
-
                 auto station = sikradio::receiver::as_station(msg, sender_addr);
-                std::cerr << "name in struct: '" << station.name << "'" << std::endl;
                 auto new_selected = station_set.update_get_selected(station);
                 if (!new_selected.has_value()) continue;
-                std::cerr << "name selected: " << "'" << new_selected.value().name << "'" << std::endl;
                 state_manager.register_address(new_selected.value().data_address);
             }
         }
@@ -83,8 +80,6 @@ namespace sikradio::receiver {
                 auto da_struct = sikradio::common::make_address(discover_addr, ctrl_port);
                 ctrl_socket.force_send_to(da_struct, msg);
 
-                std::cerr << "lookup sent" << std::endl;
-
                 std::this_thread::sleep_for(lookup_freq);
             }
         }
@@ -93,6 +88,8 @@ namespace sikradio::receiver {
             std::set<sikradio::common::msg_id_t> ids_to_rexmit;
             std::set<sikradio::common::msg_id_t> ids_to_forget;
             while(true) {
+                std::this_thread::sleep_for(rexmit_check_freq);
+
                 ids_to_rexmit = rexmit_manager.filter_get_ids(ids_to_forget);
                 ids_to_forget.clear();
                 for (auto it = ids_to_rexmit.begin(); it != ids_to_rexmit.end();) {
@@ -103,11 +100,12 @@ namespace sikradio::receiver {
                         it++;
                     }
                 }
+                if (ids_to_rexmit.empty()) continue;
+
                 auto msg = sikradio::common::make_rexmit(ids_to_rexmit);
                 auto current_station = station_set.get_selected();
                 if (!current_station.has_value()) continue;
                 
-                std::cerr << "preparing rexmit: '" << current_station.value().name << "'" << std::endl;
                 auto addr = sikradio::common::make_address(
                     current_station.value().ctrl_address,
                     current_station.value().ctrl_port
@@ -127,8 +125,6 @@ namespace sikradio::receiver {
                 auto msg_session_id = msg.value().get_session_id();
                 auto ignore_msg = state_manager.register_session_check_ignore(msg_session_id);
                 if (ignore_msg) continue;
-
-                std::cerr << "got message" << std::endl;
 
                 auto msg_id = msg.value().get_id();
                 if (max_msg_id.has_value() && max_msg_id.value() + 1 != msg_id)
@@ -186,7 +182,7 @@ namespace sikradio::receiver {
             ctrl_port{ctrl_port},
             buffer{bsize},
             data_socket{},
-            ctrl_socket{ctrl_port},
+            ctrl_socket{ctrl_port, true, false},
             // ui_socket{ui_port},  // TODO: Implement
             station_set{preferred_station},
             rexmit_manager{rtime},

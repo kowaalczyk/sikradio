@@ -51,7 +51,7 @@ namespace sikradio::receiver {
             // subscribe to multicast address
             struct ip_mreq ip_mreq;
             ip_mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-            int err = inet_aton(multicast_dotted_address.data(), &ip_mreq.imr_multiaddr);
+            int err = inet_aton(multicast_dotted_address.c_str(), &ip_mreq.imr_multiaddr);
             if (err == 0) close_and_throw();
             err = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&ip_mreq, sizeof(ip_mreq));
             if (err < 0) close_and_throw();

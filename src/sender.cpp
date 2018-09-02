@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
         po::store(po::parse_command_line(argc, argv, desc), vm);
         po::notify(vm);
     } catch (po::error &e) {
-        // std::cerr << e.what() << std::endl;
+        std::cerr << e.what() << std::endl;
         exit(1);
     }
 

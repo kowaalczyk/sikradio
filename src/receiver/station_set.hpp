@@ -57,8 +57,6 @@ namespace sikradio::receiver {
             if (stations.empty()) {
                 return std::nullopt;
             }
-            std::cerr << "selected: '" <<  selected_station->name << "'" <<std::endl;
-
             return std::make_optional(*selected_station);
         }
 
@@ -89,7 +87,6 @@ namespace sikradio::receiver {
                     && erased == 0)
                 selected_station = new_it;
 
-            std::cerr << "stations #=" << stations.size() << ", selected_name='" << selected_station->name << "'" << std::endl;
             remove_old_stations();
             return get_selected_station();
         }

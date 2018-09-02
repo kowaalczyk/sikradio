@@ -71,7 +71,11 @@ namespace sikradio::common {
             session_id = ntohll(session_id);
             memcpy(&id, raw_msg.data()+sizeof(msg_id_t), sizeof(msg_id_t));
             id = ntohll(id);
-            std::copy(raw_msg.data() + 2*sizeof(msg_id_t), raw_msg.data()+sizeof(raw_msg), std::back_inserter(data));
+            std::copy(
+                raw_msg.data() + 2*sizeof(msg_id_t), 
+                raw_msg.data() + raw_msg.size(), 
+                std::back_inserter(data)
+            );
             // data.assign(raw_msg + 2*sizeof(msg_id_t), raw_msg + sizeof(raw_msg) - 2*sizeof(msg_id_t) - 1);
 
             this->id = id;

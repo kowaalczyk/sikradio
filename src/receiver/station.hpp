@@ -48,6 +48,7 @@ namespace sikradio::receiver {
         s.ctrl_address = ctrl_addr;
         s.ctrl_port = ntohs(sender_address.sin_port);
         s.data_port = data_port;
+        s.last_reply = std::chrono::system_clock::now();
         return s;
     }
 }

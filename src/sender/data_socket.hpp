@@ -13,9 +13,9 @@
 #include "../common/data_msg.hpp"
 #include "../common/exceptions.hpp"
 
-
+#ifndef TTL_VALUE
 #define TTL_VALUE 64
-
+#endif
 
 using socket_exception = sikradio::common::exceptions::socket_exception;
 
