@@ -8,9 +8,11 @@
 #include <atomic>
 #include <future>
 #include <csignal>
+#include <iostream>
 
 #include "../common/ctrl_socket.hpp"
 #include "../common/ctrl_msg.hpp"
+#include "../common/address_helpers.hpp"
 #include "buffer.hpp"
 #include "data_socket.hpp"
 #include "station_set.hpp"
@@ -21,6 +23,7 @@ namespace sikradio::receiver {
 
     namespace {
         const auto reset_check_freq = std::chrono::milliseconds(20);
+        const auto rexmit_check_freq = std::chrono::milliseconds(10);
         const auto lookup_freq = std::chrono::seconds(5);
     }
 
@@ -74,7 +77,9 @@ namespace sikradio::receiver {
         void run_lookup_sender() {  // LOCKS: 1
             while(true) {
                 auto msg = sikradio::common::make_lookup();
-                ctrl_socket.send_to(discover_addr, ctrl_port, msg);
+                auto da_struct = sikradio::common::make_address(discover_addr, ctrl_port);
+                ctrl_socket.force_send_to(da_struct, msg);
+
                 std::this_thread::sleep_for(lookup_freq);
             }
         }
@@ -83,6 +88,8 @@ namespace sikradio::receiver {
             std::set<sikradio::common::msg_id_t> ids_to_rexmit;
             std::set<sikradio::common::msg_id_t> ids_to_forget;
             while(true) {
+                std::this_thread::sleep_for(rexmit_check_freq);
+
                 ids_to_rexmit = rexmit_manager.filter_get_ids(ids_to_forget);
                 ids_to_forget.clear();
                 for (auto it = ids_to_rexmit.begin(); it != ids_to_rexmit.end();) {
@@ -93,14 +100,17 @@ namespace sikradio::receiver {
                         it++;
                     }
                 }
+                if (ids_to_rexmit.empty()) continue;
+
                 auto msg = sikradio::common::make_rexmit(ids_to_rexmit);
                 auto current_station = station_set.get_selected();
                 if (!current_station.has_value()) continue;
                 
-                ctrl_socket.send_to(
-                    current_station.value().ctrl_address, 
-                    current_station.value().ctrl_port,
-                    msg);
+                auto addr = sikradio::common::make_address(
+                    current_station.value().ctrl_address,
+                    current_station.value().ctrl_port
+                );
+                ctrl_socket.send_to(addr, msg);
             }
         }
 
@@ -172,7 +182,7 @@ namespace sikradio::receiver {
             ctrl_port{ctrl_port},
             buffer{bsize},
             data_socket{},
-            ctrl_socket{ctrl_port},
+            ctrl_socket{ctrl_port, true, false},
             // ui_socket{ui_port},  // TODO: Implement
             station_set{preferred_station},
             rexmit_manager{rtime},

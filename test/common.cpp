@@ -1,6 +1,7 @@
 #include "catch.hpp"
 
 #include <set>
+#include <cmemory>
 
 #include "../src/common/types.hpp"
 #include "../src/common/ctrl_msg.hpp"
@@ -101,6 +102,7 @@ TEST_CASE("data message construction") {
         // simulate message receive:
         auto sndbl = test_msg.sendable();
         char rcv_buff[UDP_DATAGRAM_DATA_LEN_MAX];
+        memset(rcv_buff, 0, UDP_DATAGRAM_DATA_LEN_MAX);
         memcpy(rcv_buff, sndbl.data(), sndbl.size());
         sikradio::common::msg_t raw_msg;
         raw_msg.assign(rcv_buff, rcv_buff+sizeof(rcv_buff));

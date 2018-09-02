@@ -86,6 +86,7 @@ namespace sikradio::receiver {
                     && preferred_station_name.value() == new_station.name
                     && erased == 0)
                 selected_station = new_it;
+
             remove_old_stations();
             return get_selected_station();
         }
