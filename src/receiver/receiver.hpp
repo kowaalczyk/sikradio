@@ -146,6 +146,7 @@ namespace sikradio::receiver {
                 }
                 if (!msg.has_value()) continue;
                 std::cout << msg.value().data();
+                std::cout.flush();
             }
         }
 

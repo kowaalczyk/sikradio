@@ -43,7 +43,6 @@ namespace sikradio::receiver {
         void connect(const std::string& multicast_dotted_address) {
             std::scoped_lock{mut};
             if (multicast_dotted_address == this->multicast_dotted_address && sock >= 0) return;
-            this->multicast_dotted_address = multicast_dotted_address;
             // if socket was opened, reconnect
             if (sock >= 0) close(sock);
             sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -66,6 +65,7 @@ namespace sikradio::receiver {
             local_address.sin_port = htons(local_port);
             err = bind(sock, (struct sockaddr*)&local_address, sizeof(local_address));
             if (err < 0) close_and_throw();
+            this->multicast_dotted_address = multicast_dotted_address;
         }
 
         std::optional<sikradio::common::data_msg> try_read() {
