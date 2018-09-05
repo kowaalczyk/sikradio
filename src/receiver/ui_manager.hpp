@@ -178,6 +178,7 @@ namespace sikradio::receiver {
                     client_sockets[i].fd = -1;
                 }
             }
+            active_menu = new_menu;
         }
 
         std::optional<menu_selection_update> get_update() {
