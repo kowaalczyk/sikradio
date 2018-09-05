@@ -9,6 +9,7 @@
 #include <future>
 #include <csignal>
 #include <iostream>
+#include <algorithm>
 
 #include "../common/ctrl_socket.hpp"
 #include "../common/ctrl_msg.hpp"
@@ -26,6 +27,7 @@ namespace sikradio::receiver {
         const auto reset_check_freq = std::chrono::milliseconds(20);
         const auto rexmit_check_freq = std::chrono::milliseconds(10);
         const auto lookup_freq = std::chrono::seconds(5);
+        const size_t socket_timeout_in_ms = 5000;
     }
 
     class receiver {
@@ -148,7 +150,7 @@ namespace sikradio::receiver {
                     }
                 }
                 if (read_msg.has_value()) {
-                    std::cout << read_msg.value().data(); std::cout.flush();
+                    std::cout << read_msg.value().data();
                 }
                 if (!missed_ids.empty()) {
                     rexmit_manager.append_ids(missed_ids);
@@ -168,6 +170,7 @@ namespace sikradio::receiver {
                 if (!changed) continue;
 
                 auto station_list = station_set.get_station_names();
+                std::sort(station_list.begin(), station_list.end());
                 auto selected_name_it = std::find(
                     station_list.begin(), 
                     station_list.end(), 
@@ -190,12 +193,12 @@ namespace sikradio::receiver {
         ) : discover_addr{discover_addr},
             ctrl_port{ctrl_port},
             buffer{bsize},
-            data_socket{},
-            ctrl_socket{ctrl_port, true, false},
+            data_socket{},  // TODO: Socket timeout in ms
+            ctrl_socket{ctrl_port, true, false},  // TODO: Socket timeout in ms
             station_set{preferred_station},
             rexmit_manager{rtime},
             state_manager{},
-            ui_manager{ui_port},
+            ui_manager{ui_port, socket_timeout_in_ms},
             data_mut{} {}
 
         void run() {

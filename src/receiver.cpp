@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cstdint>
 #include <optional>
+#include <csignal>
 
 #include "receiver/receiver.hpp"
 
@@ -29,15 +30,20 @@ int main(int argc, char *argv[]) {
     std::optional<std::string> preferred_station = ps_input.empty() ? 
         std::nullopt : std::make_optional(ps_input);
 
-    sikradio::receiver::receiver rcvr(
-        vm["-d"].as<std::string>(),
-        vm["-C"].as<uint16_t>(),
-        vm["-U"].as<uint16_t>(),
-        vm["-b"].as<size_t>(),
-        vm["-R"].as<size_t>(),
-        preferred_station
-    );
-    rcvr.run();
+    try {
+        sikradio::receiver::receiver rcvr(
+            vm["-d"].as<std::string>(),
+            vm["-C"].as<uint16_t>(),
+            vm["-U"].as<uint16_t>(),
+            vm["-b"].as<size_t>(),
+            vm["-R"].as<size_t>(),
+            preferred_station
+        );
+        rcvr.run();
+    } catch (sikradio::common::exceptions::base_exception &e) {
+        std::cerr << e.what() << std::endl;
+        exit(1);
+    }
 
     return 0;
 }
