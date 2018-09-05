@@ -46,6 +46,7 @@ namespace sikradio::common {
 
         explicit ctrl_socket(
                 in_port_t local_port, 
+                int socket_timeout_in_ms=500,
                 bool enable_broadcast=false, 
                 bool bind_local=true) {
             sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -61,8 +62,8 @@ namespace sikradio::common {
             if (err < 0) close_and_throw();
             // set timeout to prevent deadlocks
             struct timeval tv{
-                    .tv_sec = 1,
-                    .tv_usec = 0
+                    .tv_sec = 0,
+                    .tv_usec = 1000*socket_timeout_in_ms
             };
             err = setsockopt(
                 sock, 

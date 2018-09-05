@@ -27,7 +27,7 @@ namespace sikradio::receiver {
         const auto reset_check_freq = std::chrono::milliseconds(20);
         const auto rexmit_check_freq = std::chrono::milliseconds(10);
         const auto lookup_freq = std::chrono::seconds(5);
-        const size_t socket_timeout_in_ms = 5000;
+        const int socket_timeout_in_ms = 500; // has to be smaller than 1000
     }
 
     class receiver {
@@ -193,8 +193,8 @@ namespace sikradio::receiver {
         ) : discover_addr{discover_addr},
             ctrl_port{ctrl_port},
             buffer{bsize},
-            data_socket{},  // TODO: Socket timeout in ms
-            ctrl_socket{ctrl_port, true, false},  // TODO: Socket timeout in ms
+            data_socket{socket_timeout_in_ms},
+            ctrl_socket{ctrl_port, socket_timeout_in_ms, true, false},
             station_set{preferred_station},
             rexmit_manager{rtime},
             state_manager{},
@@ -210,7 +210,6 @@ namespace sikradio::receiver {
 
             run_data_handler();
 
-            // TODO: This might be unnecessary (threads have to be terminated anyway)
             ui_handler.join();
             lookup_sender.join();
             rexmit_sender.join();

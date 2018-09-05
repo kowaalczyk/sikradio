@@ -61,7 +61,7 @@ namespace sikradio::receiver {
     private:
         std::mutex mut;
         in_port_t ui_port;
-        size_t poll_timeout_in_ms;
+        int poll_timeout_in_ms;
         pollfd client_sockets[MAX_UI_CLIENT_CONNECTIONS];
         std::string active_menu;
         char buffer[buffer_size];
@@ -121,7 +121,7 @@ namespace sikradio::receiver {
         ui_manager() = delete;
         ui_manager(const ui_manager& other) = delete;
         ui_manager(ui_manager&& other) = delete;
-        ui_manager(in_port_t ui_port, size_t poll_timeout_in_ms) : 
+        ui_manager(in_port_t ui_port, int poll_timeout_in_ms) : 
                 ui_port{ui_port},
                 poll_timeout_in_ms{poll_timeout_in_ms} {
             // initialize poll table

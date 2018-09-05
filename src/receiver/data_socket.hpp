@@ -28,6 +28,7 @@ namespace sikradio::receiver {
         std::mutex mut{};
         sikradio::receiver::structures::station connected_station;
         sikradio::common::byte_t buffer[UDP_DATAGRAM_DATA_LEN_MAX];
+        int timeout_in_ms;
         int sock = -1;
 
         void close_and_throw() {
@@ -36,9 +37,11 @@ namespace sikradio::receiver {
         }
 
     public:
-        data_socket() = default;
+        data_socket() : timeout_in_ms{5000} {};
         data_socket(const data_socket& other) = delete;
         data_socket(data_socket&& other) = delete;
+        explicit data_socket(int socket_timeout_in_ms) : 
+                timeout_in_ms{socket_timeout_in_ms} {}
 
         void connect(const sikradio::receiver::structures::station new_station) {
             std::scoped_lock{mut};
@@ -56,7 +59,7 @@ namespace sikradio::receiver {
             int err = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&req, sizeof(req));
             if (err < 0) close_and_throw();
             // set timeout to 1 second to prevent deadlocks (possible with optional returns)
-            struct timeval tv{ .tv_sec = 1, .tv_usec = 0};
+            struct timeval tv{ .tv_sec = 0, .tv_usec = 1000*timeout_in_ms};
             err = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
             if (err < 0) close_and_throw();
             // bind socket to new address
