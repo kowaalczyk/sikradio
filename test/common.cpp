@@ -127,11 +127,3 @@ TEST_CASE("comparison of data messages") {
 
         REQUIRE(msg1 < msg2);
     }
-    // TODO: If equality is added, make sure to test this:
-    // SECTION("equality") {
-    //     auto msg1 = sikradio::common::data_msg{smaller_id};
-    //     auto msg2 = sikradio::common::data_msg{smaller_id};
-
-    //     REQUIRE(msg1 == msg2);
-    // }
-}

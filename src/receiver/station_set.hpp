@@ -9,7 +9,7 @@
 #include <mutex>
 #include <optional>
 
-#include "station.hpp"
+#include "structures.hpp"
 
 namespace sikradio::receiver {
     namespace {
@@ -18,14 +18,15 @@ namespace sikradio::receiver {
         const std::string SELECTED_STATION_PREFIX = "  > ";
     }
 
-    enum class menu_selection_update {UP, DOWN};
+    using station = sikradio::receiver::structures::station;
+    using menu_selection_update = sikradio::receiver::structures::menu_selection_update;
 
     class station_set {
     private:
         std::mutex mut{};
         std::optional<std::string> preferred_station_name{std::nullopt};
-        std::set<sikradio::receiver::station> stations{};
-        std::set<sikradio::receiver::station>::iterator selected_station{stations.end()};
+        std::set<station> stations{};
+        std::set<station>::iterator selected_station{stations.end()};
 
         /**
          * Removes stations older than MAX_INACTIVE_SECONDS from the internal collection.
@@ -53,7 +54,7 @@ namespace sikradio::receiver {
             }
         }
 
-        std::optional<sikradio::receiver::station> get_selected_station() {
+        std::optional<station> get_selected_station() {
             if (stations.empty()) {
                 return std::nullopt;
             }
@@ -72,11 +73,11 @@ namespace sikradio::receiver {
         explicit station_set(std::optional<std::string> preferred_station_name) : 
                 preferred_station_name{preferred_station_name} {}
 
-        std::optional<sikradio::receiver::station> 
-        update_get_selected(const sikradio::receiver::station &new_station) {
+        std::optional<station> 
+        update_get_selected(const station &new_station) {
             std::scoped_lock{mut};
 
-            std::set<sikradio::receiver::station>::iterator new_it;
+            std::set<station>::iterator new_it;
             size_t erased = stations.erase(new_station);
             std::tie(new_it, std::ignore) = stations.emplace(new_station);
 
@@ -91,8 +92,8 @@ namespace sikradio::receiver {
             return get_selected_station();
         }
 
-        std::optional<sikradio::receiver::station> 
-        select_get_selected(const sikradio::receiver::menu_selection_update msu) {
+        std::optional<station> 
+        select_get_selected(const menu_selection_update msu) {
             std::scoped_lock{mut};
             
             if (stations.empty()) return get_selected_station();
@@ -107,7 +108,7 @@ namespace sikradio::receiver {
             return get_selected_station();
         }
 
-        std::optional<sikradio::receiver::station> get_selected() {
+        std::optional<station> get_selected() {
             std::scoped_lock{mut};
             return get_selected_station();
         }

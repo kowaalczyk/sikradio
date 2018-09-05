@@ -336,7 +336,7 @@ TEST_CASE("station set") {
     }
 
     SECTION("after long inactivity") {
-        // TODO: Implement this test in case of problems
+        // Implement this test in case of problems
     }
 
     SECTION("returns printable names in correct format") {

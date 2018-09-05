@@ -31,6 +31,7 @@ namespace sikradio::common {
         // simultaneous reading and writing to same socket is generally possible
         std::mutex read_mut{};
         std::mutex write_mut{};
+        sikradio::common::byte_t buffer[UDP_DATAGRAM_DATA_LEN_MAX];
         int sock = -1;
 
         void close_and_throw() {
@@ -106,7 +107,6 @@ namespace sikradio::common {
             std::scoped_lock{read_mut};
             struct sockaddr_in sender_address{};
             auto rcva_len = (socklen_t) sizeof(sender_address);
-            char buffer[UDP_DATAGRAM_DATA_LEN_MAX];  // TODO: Allocate once
             memset(buffer, 0, UDP_DATAGRAM_DATA_LEN_MAX);
             ssize_t len = recvfrom(
                 sock, 

@@ -12,7 +12,9 @@
 #include <optional>
 
 #include "../common/exceptions.hpp"
+#include "../common/address_helpers.hpp"
 #include "../common/data_msg.hpp"
+#include "structures.hpp"
 
 #ifndef UDP_DATAGRAM_DATA_LEN_MAX
 #define UDP_DATAGRAM_DATA_LEN_MAX 65535
@@ -24,8 +26,8 @@ namespace sikradio::receiver {
     class data_socket {
     private:
         std::mutex mut{};
-        std::string multicast_dotted_address{};
-        in_port_t local_port;
+        sikradio::receiver::structures::station connected_station;
+        sikradio::common::byte_t buffer[UDP_DATAGRAM_DATA_LEN_MAX];
         int sock = -1;
 
         void close_and_throw() {
@@ -38,40 +40,34 @@ namespace sikradio::receiver {
         data_socket(const data_socket& other) = delete;
         data_socket(data_socket&& other) = delete;
 
-        explicit data_socket(in_port_t local_port) : local_port{local_port} {}
-
-        void connect(const std::string& multicast_dotted_address) {
+        void connect(const sikradio::receiver::structures::station new_station) {
             std::scoped_lock{mut};
-            if (multicast_dotted_address == this->multicast_dotted_address && sock >= 0) return;
+            if (new_station == connected_station) return;
             // if socket was opened, reconnect
             if (sock >= 0) close(sock);
             sock = socket(AF_INET, SOCK_DGRAM, 0);
             if (sock < 0) throw socket_exception(strerror(errno));
             // subscribe to multicast address
-            struct ip_mreq ip_mreq;
-            ip_mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-            int err = inet_aton(multicast_dotted_address.c_str(), &ip_mreq.imr_multiaddr);
-            if (err == 0) close_and_throw();
-            err = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&ip_mreq, sizeof(ip_mreq));
+            struct sockaddr_in new_addr = sikradio::common::make_address(
+                new_station.data_address, 
+                new_station.data_port);
+            struct ip_mreq req;
+            req.imr_multiaddr = new_addr.sin_addr;
+            int err = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&req, sizeof(req));
             if (err < 0) close_and_throw();
             // set timeout to 1 second to prevent deadlocks (possible with optional returns)
             struct timeval tv{ .tv_sec = 1, .tv_usec = 0};
             err = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
             if (err < 0) close_and_throw();
-            // bind socket to local port
-            struct sockaddr_in local_address;
-            local_address.sin_family = AF_INET;
-            local_address.sin_addr.s_addr = htonl(INADDR_ANY);
-            local_address.sin_port = htons(local_port);
-            err = bind(sock, (struct sockaddr*)&local_address, sizeof(local_address));
+            // bind socket to new address
+            err = bind(sock, (struct sockaddr*)&new_addr, sizeof(new_addr));
             if (err < 0) close_and_throw();
-            this->multicast_dotted_address = multicast_dotted_address;
+            connected_station = new_station;
         }
 
         std::optional<sikradio::common::data_msg> try_read() {
             if (sock == -1) return std::nullopt;
 
-            sikradio::common::byte_t buffer[UDP_DATAGRAM_DATA_LEN_MAX];  // TODO: Allocate once
             memset(buffer, 0, UDP_DATAGRAM_DATA_LEN_MAX);
             ssize_t len = read(sock, &buffer, sizeof(buffer));
             if (len < 0) {

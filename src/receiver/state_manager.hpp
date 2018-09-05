@@ -8,12 +8,15 @@
 #include <netinet/in.h>
 
 #include "../common/types.hpp"
+#include "structures.hpp"
 
 namespace sikradio::receiver {
+    using station = sikradio::receiver::structures::station;
+
     class state_manager {
     private:
         std::mutex mut{};
-        std::optional<std::string> multicast_address{std::nullopt};
+        std::optional<station> active_station{std::nullopt};
         std::atomic_bool dirty{false};
         sikradio::common::msg_id_t session_id{0};
 
@@ -22,21 +25,22 @@ namespace sikradio::receiver {
         state_manager(const state_manager& other) = delete;
         state_manager(state_manager&& other) = delete;
 
-        std::tuple<std::optional<std::string>, in_port_t> check_state() {
+        std::tuple<std::optional<station>, in_port_t> check_state() {
             std::scoped_lock{mut};
 
             bool was_dirty = dirty;
             dirty = false;
-            return std::make_tuple(multicast_address, was_dirty);
+            return std::make_tuple(active_station, was_dirty);
         }
 
-        void register_address(std::string new_multicast_address) {
+        bool register_address_check_change(station new_station) {
             std::scoped_lock{mut};
 
-            if (!multicast_address.has_value() || multicast_address.value() != new_multicast_address) {
-                multicast_address = std::make_optional(new_multicast_address);
+            if (!active_station.has_value() || active_station.value() != new_station) {
+                active_station = std::make_optional(new_station);
                 dirty = true;
             }
+            return dirty;
         }
 
         bool register_session_check_ignore(sikradio::common::msg_id_t new_session_id) {

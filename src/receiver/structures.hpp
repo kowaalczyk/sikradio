@@ -1,5 +1,5 @@
-#ifndef SIKRADIO_RECEIVER_STATION_HPP
-#define SIKRADIO_RECEIVER_STATION_HPP
+#ifndef SIKRADIO_RECEIVER_STRUCTURES_HPP
+#define SIKRADIO_RECEIVER_STRUCTURES_HPP
 
 #include <string>
 #include <tuple>
@@ -9,7 +9,9 @@
 
 #include "../common/ctrl_msg.hpp"
 
-namespace sikradio::receiver {
+namespace sikradio::receiver::structures {
+    enum class menu_selection_update {UP, DOWN};
+
     struct station {
         std::string name;
         std::string ctrl_address;
@@ -30,6 +32,7 @@ namespace sikradio::receiver {
             bool dp_equal = (data_port == other.data_port);
             return (names_equal && da_equal && ca_equal && cp_equal && dp_equal);
         }
+        bool operator!=(const station& other) const {return !((*this) == other);}
     };
     typedef struct station station;
 

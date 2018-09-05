@@ -18,6 +18,7 @@
 #include "station_set.hpp"
 #include "rexmit_manager.hpp"
 #include "state_manager.hpp"
+#include "ui_manager.hpp"
 
 namespace sikradio::receiver {
 
@@ -34,24 +35,23 @@ namespace sikradio::receiver {
         sikradio::receiver::buffer buffer;
         sikradio::receiver::data_socket data_socket;
         sikradio::common::ctrl_socket ctrl_socket;
-        // TODO: UI socket
         sikradio::receiver::station_set station_set;
         sikradio::receiver::rexmit_manager rexmit_manager;
         sikradio::receiver::state_manager state_manager;
-        // TODO: UI client manager
+        sikradio::receiver::ui_manager ui_manager;
         std::mutex data_mut{};
 
         void run_playback_resetter() {  // LOCKS: 1 or 3
-            std::optional<std::string> multicast_address;
+            std::optional<sikradio::receiver::structures::station> station;
             bool dirty;
             while(true) {
-                std::tie(multicast_address, dirty) = state_manager.check_state();
+                std::tie(station, dirty) = state_manager.check_state();
                 if (dirty) {  // reset playback
-                    std::scoped_lock{data_mut};  // stops data receiver TODO: Make sure there is no deadlock
+                    std::scoped_lock{data_mut};  // stops data_receiver
                     buffer.reset();
                     rexmit_manager.reset();
-                    if (multicast_address.has_value())
-                        data_socket.connect(multicast_address.value());
+                    if (station.has_value())
+                        data_socket.connect(station.value());
                 }
                 std::this_thread::sleep_for(reset_check_freq);
             }
@@ -67,10 +67,11 @@ namespace sikradio::receiver {
                 std::tie(msg, sender_addr) = rcv.value();
                 if (!msg.is_reply()) continue;
                 
-                auto station = sikradio::receiver::as_station(msg, sender_addr);
+                auto station = sikradio::receiver::structures::as_station(msg, sender_addr);
                 auto new_selected = station_set.update_get_selected(station);
                 if (!new_selected.has_value()) continue;
-                state_manager.register_address(new_selected.value().data_address);
+                
+                state_manager.register_address_check_change(new_selected.value());
             }
         }
 
@@ -117,7 +118,7 @@ namespace sikradio::receiver {
         void run_data_receiver() {  // LOCKS: 1 or 2 or 4
             std::optional<sikradio::common::msg_id_t> max_msg_id = std::nullopt;
             while(true) {
-                std::scoped_lock{data_mut};  // TODO: Check for deadlocks
+                std::scoped_lock{data_mut};
 
                 auto msg = data_socket.try_read();
                 if (!msg.has_value()) continue;
@@ -150,21 +151,25 @@ namespace sikradio::receiver {
             }
         }
 
-        void run_ui_receiver() {
+        void run_ui_handler() {
+            // TODO: Make sure that when station_set becomes empty the receiver does not crash
+            //       due to omitted update to data_socket and state_manager
             while (true) {
-                // TODO: 
-                // 1. try read from ui socket
-                // 2. if read something:
-                // 3. update selection in station_list
-                // 4. register update in state manager
-            }
-        }
+                auto msu = ui_manager.get_update();
+                if (!msu.has_value()) continue;
 
-        void run_ui_sender() {
-            while (true) {
-                // TODO:
-                // 1. get list of available stations
-                // 2. stream them to all listening UIs
+                auto new_selected = station_set.select_get_selected(msu.value());
+                if (!new_selected.has_value()) continue;
+
+                bool changed = state_manager.register_address_check_change(new_selected.value());
+                if (!changed) continue;
+
+                auto station_list = station_set.get_station_names();
+                auto selected_name_it = std::find(
+                    station_list.begin(), 
+                    station_list.end(), 
+                    new_selected.value().name);
+                ui_manager.send_menu(station_list, selected_name_it);
             }
         }
 
@@ -184,11 +189,10 @@ namespace sikradio::receiver {
             buffer{bsize},
             data_socket{},
             ctrl_socket{ctrl_port, true, false},
-            // ui_socket{ui_port},  // TODO: Implement
             station_set{preferred_station},
             rexmit_manager{rtime},
             state_manager{},
-            // client_manager{},  // TODO: Implement
+            ui_manager{ui_port},
             data_mut{} {}
 
         void run() {
