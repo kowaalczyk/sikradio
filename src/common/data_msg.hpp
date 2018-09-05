@@ -76,7 +76,6 @@ namespace sikradio::common {
                 raw_msg.data() + raw_msg.size(), 
                 std::back_inserter(data)
             );
-            // data.assign(raw_msg + 2*sizeof(msg_id_t), raw_msg + sizeof(raw_msg) - 2*sizeof(msg_id_t) - 1);
 
             this->id = id;
             this->session_id = std::make_optional(session_id);

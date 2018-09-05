@@ -19,7 +19,7 @@ sikradio-receiver: src/receiver.cpp
 all: sikradio-sender sikradio-receiver
 
 test/build/test_main.o: test/test_main.cpp
-	mkdir test/build > /dev/null 2>&1
+	-mkdir test/build > /dev/null 2>&1
 	$(COMPILER) $(PRE_FLAGS) $< -c -o $@
 
 test-common: test/build/test_main.o clean

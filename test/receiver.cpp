@@ -10,7 +10,7 @@
 #include "../src/receiver/rexmit_manager.hpp"
 #include "../src/receiver/state_manager.hpp"
 #include "../src/receiver/station_set.hpp"
-#include "../src/receiver/station.hpp"
+#include "../src/receiver/structures.hpp"
 
 namespace {
     const std::string msg_data = "some random message data";

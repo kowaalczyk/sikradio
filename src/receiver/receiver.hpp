@@ -142,8 +142,9 @@ namespace sikradio::receiver {
                 try {
                     msg = buffer.try_read();
                 } catch (sikradio::receiver::exceptions::buffer_access_exception &e) {
-                    std::cerr << e.what() << std::endl;
+                    std::cerr << e.what() << std::endl; std::cerr.flush();
                     state_manager.mark_dirty();
+                    msg = std::nullopt;
                 }
                 if (!msg.has_value()) continue;
                 std::cout << msg.value().data();
@@ -200,16 +201,14 @@ namespace sikradio::receiver {
             std::thread ctrl_receiver(&receiver::run_ctrl_receiver, this);
             std::thread lookup_sender(&receiver::run_lookup_sender, this);
             std::thread rexmit_sender(&receiver::run_rexmit_sender, this);
-            std::thread ui_sender(&receiver::run_ui_sender, this);
-            std::thread ui_receiver(&receiver::run_ui_receiver, this);
+            std::thread ui_handler(&receiver::run_ui_handler, this);
             std::thread data_receiver(&receiver::run_data_receiver, this);
 
             run_data_streamer();
 
             // TODO: This might be unnecessary (threads have to be terminated anyway)
             data_receiver.join();
-            ui_sender.join();
-            ui_receiver.join();            
+            ui_handler.join();
             lookup_sender.join();
             rexmit_sender.join();
             ctrl_receiver.join();

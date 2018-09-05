@@ -9,15 +9,6 @@
 namespace sikradio::receiver {
     using menu_selection_update = sikradio::receiver::structures::menu_selection_update;
 
-    namespace {
-        std::string sendable_menu(
-                std::vector<std::string> stations, 
-                std::vector<std::string>::iterator selected) {
-            // TODO
-            return std::string();
-        }
-    }
-
     class ui_manager {
     private:
         std::mutex mut;
@@ -45,6 +36,7 @@ namespace sikradio::receiver {
             // 1. poll, if there are updates save message to return as last_update
             // 2. for each of clients, transmit sendable_menu
             // 3. save sendable_menu as last_sent_menu
+            return std::nullopt;
         }
     };
 }

@@ -80,7 +80,7 @@ namespace sikradio::receiver {
                 }
             }
             sikradio::common::msg_t raw_msg;
-            raw_msg.assign(buffer, buffer+sizeof(buffer));
+            raw_msg.assign(buffer, buffer+len);
             return std::make_optional(sikradio::common::data_msg(raw_msg));
         }
 

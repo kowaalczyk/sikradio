@@ -18,9 +18,11 @@ namespace sikradio::receiver {
     private:
         std::mutex mut{};
 
+        size_t max_size;
         size_t max_elements;
 
         sikradio::common::msg_id_t byte_zero{};
+        size_t package_size;  // size of package deduced from first package in session
         sikradio::receiver::buffer_state state{sikradio::receiver::buffer_state::NO_SESSION};
         std::deque<std::optional<sikradio::common::msg_t>> msg_vals{};
         std::deque<sikradio::common::msg_id_t> msg_ids{};
@@ -32,7 +34,7 @@ namespace sikradio::receiver {
                 return;
             }
             // reserve empty space for missed messages and pop excessive elements
-            for (auto missed_id = msg_ids.back() + 1; missed_id < msg.get_id(); missed_id++) {
+            for (auto missed_id = msg_ids.back() + package_size; missed_id < msg.get_id(); missed_id += package_size) {
                 if (msg_ids.size() == max_elements) {
                     msg_ids.pop_front();
                     msg_vals.pop_front();
@@ -50,7 +52,7 @@ namespace sikradio::receiver {
 
         void save_missed_message(const sikradio::common::data_msg &msg) {
             // message already has allocated space in the buffer - no need to pop elements
-            size_t msg_pos = msg.get_id() - msg_ids.front();
+            size_t msg_pos = (msg.get_id()-msg_ids.front()) / package_size;
             msg_vals[msg_pos] = std::make_optional(msg.get_data());
         }
 
@@ -58,19 +60,23 @@ namespace sikradio::receiver {
         buffer() = delete;
         buffer(const buffer& other) = delete;
         buffer(buffer&& other) = delete;
-        explicit buffer(size_t max_elements) : max_elements(max_elements) {}
+        explicit buffer(size_t max_size) : max_size{max_size} {}
 
         void write(const sikradio::common::data_msg &msg) {
             std::scoped_lock{mut};
+
             // update session and state if necessary
             if (state == sikradio::receiver::buffer_state::NO_SESSION) {
                 byte_zero = msg.get_id();
+                package_size = msg.get_data().size();
+                max_elements = max_size / package_size;
                 state = sikradio::receiver::buffer_state::WAITING;
             }
-            if (msg.get_id() >= byte_zero + max_elements*3/4) {
+            if (msg.get_id() >= byte_zero + max_elements*package_size*3/4) {
                 state = sikradio::receiver::buffer_state::READABLE;
             }
             // save message to buffer
+            if (msg.get_id() % package_size != 0) throw buffer_access_exception("Id=" + std::to_string(msg.get_id()) + "must be divisible by package size=" + std::to_string(package_size));
             if (msg_ids.empty() || msg.get_id() > msg_ids.back()) {
                 save_new_message(msg);
             } else if (msg_ids.front() <= msg.get_id() && msg.get_id() <= msg_ids.back()) {
@@ -87,7 +93,7 @@ namespace sikradio::receiver {
                 return std::nullopt;
             if (!msg_vals.front().has_value())
                 throw buffer_access_exception("Buffer is not readable during active session!");
-            auto ret = std::move(msg_vals.front());
+            auto ret = msg_vals.front();
             msg_vals.pop_front();
             msg_ids.pop_front();
             return ret;
@@ -104,9 +110,9 @@ namespace sikradio::receiver {
         void reset() {
             std::scoped_lock{mut};
 
-            msg_ids = std::deque<sikradio::common::msg_id_t>();
-            msg_vals = std::deque<std::optional<sikradio::common::msg_t>>();
             state = sikradio::receiver::buffer_state::NO_SESSION;
+            msg_ids.clear();
+            msg_vals.clear();
         }
     };
 }
