@@ -116,8 +116,8 @@ namespace sikradio::receiver {
         }
 
         void run_data_handler() {  // LOCKS: 1 or 2 or 4
-            std::optional<sikradio::common::msg_id_t> max_msg_id = std::nullopt;
             std::optional<sikradio::common::msg_t> read_msg = std::nullopt;
+            std::set<sikradio::common::msg_id_t> missed_ids;
             while(true) {
                 std::scoped_lock{data_mut};
 
@@ -125,18 +125,18 @@ namespace sikradio::receiver {
                 if (msg.has_value()) {
                     auto msg_session_id = msg.value().get_session_id();
                     auto ignore_msg = state_manager.register_session_check_ignore(msg_session_id);
-                    if (!ignore_msg) {
-                        auto msg_id = msg.value().get_id();
-                        if (max_msg_id.has_value() && max_msg_id.value() + 1 != msg_id)
-                            rexmit_manager.append_ids(max_msg_id.value() + 1, msg_id);
-                        
+                    
+                    if (ignore_msg) {
+                        read_msg = std::nullopt;
+                        missed_ids.clear();
+                    } else {
                         try {
-                            read_msg = buffer.write_try_read(msg.value());
+                            std::tie(read_msg, missed_ids) = buffer.write_try_read_get_rexmit(msg.value());
                         } catch (sikradio::receiver::exceptions::buffer_access_exception &e) {
-                            std::cerr << e.what() << std::endl; std::cerr.flush();
+                            std::cerr << e.what() << std::endl;
                             read_msg = std::nullopt;
+                            missed_ids.clear();
                         }
-                        max_msg_id = std::make_optional(std::max(max_msg_id.value_or(0), msg_id));
                     }
                 } else {
                     try {
@@ -144,10 +144,14 @@ namespace sikradio::receiver {
                     } catch (sikradio::receiver::exceptions::buffer_access_exception &e) {
                         std::cerr << e.what() << std::endl; std::cerr.flush();
                         read_msg = std::nullopt;
+                        missed_ids.clear();
                     }
                 }
                 if (read_msg.has_value()) {
                     std::cout << read_msg.value().data(); std::cout.flush();
+                }
+                if (!missed_ids.empty()) {
+                    rexmit_manager.append_ids(missed_ids);
                 }
             }
         }

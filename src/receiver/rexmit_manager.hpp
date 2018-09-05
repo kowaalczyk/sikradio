@@ -38,12 +38,12 @@ namespace sikradio::receiver {
         rexmit_manager(rexmit_manager&& other) = delete;
         explicit rexmit_manager(size_t rtime_seconds) : rtime{std::chrono::seconds(rtime_seconds)} {}
 
-        void append_ids(sikradio::common::msg_id_t begin, sikradio::common::msg_id_t end) {
+        void append_ids(const std::set<sikradio::common::msg_id_t>& new_ids) {
             std::scoped_lock{mut};
 
             auto next_update = std::chrono::system_clock::now() + rtime;
-            for (auto id = begin; id < end; id++) {
-                rexmit_ids.emplace(id, next_update);
+            for (auto it = new_ids.begin(); it != new_ids.end(); it++) {
+                rexmit_ids.emplace(*it, next_update);
             }
         }
 

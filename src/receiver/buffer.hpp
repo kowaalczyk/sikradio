@@ -3,6 +3,8 @@
 
 #include <mutex>
 #include <deque>
+#include <set>
+#include <utility>
 #include <optional>
 
 #include "../common/data_msg.hpp"
@@ -21,6 +23,7 @@ namespace sikradio::receiver {
         size_t max_size;
         size_t max_elements;
 
+        sikradio::common::msg_id_t max_msg_id{};
         sikradio::common::msg_id_t byte_zero{};
         size_t package_size;  // size of package deduced from first package in session
         sikradio::receiver::buffer_state state{sikradio::receiver::buffer_state::NO_SESSION};
@@ -73,13 +76,14 @@ namespace sikradio::receiver {
         buffer(buffer&& other) = delete;
         explicit buffer(size_t max_size) : max_size{max_size} {}
 
-        std::optional<sikradio::common::msg_t> 
-        write_try_read(const sikradio::common::data_msg &msg) {
+        std::pair<std::optional<sikradio::common::msg_t>, std::set<sikradio::common::msg_id_t>>
+        write_try_read_get_rexmit(const sikradio::common::data_msg &msg) {
             std::scoped_lock{mut};
 
             // update session and state if necessary
             if (state == sikradio::receiver::buffer_state::NO_SESSION) {
                 byte_zero = msg.get_id();
+                max_msg_id = msg.get_id();
                 package_size = msg.get_data().size();
                 max_elements = max_size / package_size;
                 state = sikradio::receiver::buffer_state::WAITING;
@@ -97,8 +101,18 @@ namespace sikradio::receiver {
             } else {
                 // received message is so old that it will be ignored
             }
+            // count missed ids
+            std::set<sikradio::common::msg_id_t> missed_ids;
+            for (auto id = std::max(max_msg_id + package_size, msg_ids.front()); 
+                    id < std::min(msg.get_id(), msg_ids.back()); 
+                    id += package_size) {
+                if (!msg_vals[id].has_value()) {
+                    missed_ids.emplace(id);
+                }
+            }
+            max_msg_id = msg.get_id();
             // try read
-            return optional_read();
+            return std::make_pair(optional_read(), missed_ids);
         }
 
         std::optional<sikradio::common::msg_t> try_read() {
