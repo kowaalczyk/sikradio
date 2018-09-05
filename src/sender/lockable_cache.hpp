@@ -4,8 +4,7 @@
 
 #include <vector>
 #include <mutex>
-#include "data_msg.hpp"
-#include "exceptions.hpp"
+#include "../common/data_msg.hpp"
 #include <optional>
 
 
@@ -13,14 +12,14 @@ using std::optional;
 using std::nullopt;
 
 
-namespace sender {
+namespace sikradio::sender {
     class lockable_cache {
     private:
         std::mutex mut{};
-        std::vector<sender::data_msg> container{};
+        std::vector<sikradio::common::data_msg> container{};
         size_t container_size;
 
-        size_t internal_id(msg_id_t id) {
+        size_t internal_id(sikradio::common::msg_id_t id) {
             return (id % container_size);
         }
 
@@ -29,19 +28,19 @@ namespace sender {
             container.reserve(container_size);
         }
 
-        optional<sender::data_msg> atomic_get(sender::msg_id_t id) {
+        optional<sikradio::common::data_msg> atomic_get(sikradio::common::msg_id_t id) {
             if (id >= container.size()) return nullopt;
 
-            std::lock_guard<std::mutex> lock(mut);
-            return optional<sender::data_msg>(container[internal_id(id)]);
+            std::scoped_lock{mut};
+            return optional<sikradio::common::data_msg>(container[internal_id(id)]);
         }
 
-        void atomic_push(sender::data_msg msg) {
-            std::lock_guard<std::mutex> lock(mut);
+        void atomic_push(sikradio::common::data_msg msg) {
+            std::scoped_lock{mut};
 
             // just to prevent segfault when copying to uninitialized memory
-            if (internal_id(msg.id) == container.size()) container.push_back(msg);
-            container[internal_id(msg.id)] = msg;
+            if (internal_id(msg.get_id()) == container.size()) container.push_back(msg);
+            container[internal_id(msg.get_id())] = msg;
         }
     };
 }

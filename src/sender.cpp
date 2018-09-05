@@ -3,6 +3,7 @@
 
 
 namespace po = boost::program_options;
+namespace sender = sikradio::sender;
 
 
 int main(int argc, char *argv[]) {

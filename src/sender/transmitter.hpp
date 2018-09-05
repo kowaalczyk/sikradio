@@ -6,15 +6,15 @@
 #include <iostream>
 #include <future>
 #include <utility>
-#include "types.hpp"
-#include "data_msg.hpp"
+
+#include "../common/types.hpp"
+#include "../common/data_msg.hpp"
+#include "../common/ctrl_socket.hpp"
 #include "data_socket.hpp"
 #include "lockable_cache.hpp"
 #include "lockable_queue.hpp"
-#include "ctrl_socket.hpp"
 
-
-namespace sender {
+namespace sikradio::sender {
     class transmitter {
     private:
         // transmitter parameters
@@ -28,37 +28,15 @@ namespace sender {
 
         // transmitter state
         size_t sent_msgs_cache_size;
-        sender::lockable_queue send_q{};
-        sender::lockable_queue resend_q{};
-        sender::lockable_cache sent_msgs;
-        sender::msg_id_t session_id;
+        sikradio::sender::lockable_queue send_q{};
+        sikradio::sender::lockable_queue resend_q{};
+        sikradio::sender::lockable_cache sent_msgs;
+        sikradio::common::msg_id_t session_id;
 
-        std::string compose_lookup_response() {
-            std::string lookup_response = "BOREWICZ_HERE ";
-            lookup_response += MCAST_ADDR;
-            lookup_response += " ";
-            lookup_response += std::to_string(DATA_PORT);
-            lookup_response += " ";
-            lookup_response += NAME;
-            lookup_response += "\n";
-            return lookup_response;
-        }
-
-        void process_lookup_request(sender::ctrl_socket &sock, sender::ctrl_msg &req) {
-            std::string lookup_response = compose_lookup_response();
-            sock.respond_force(
-                req, 
-                lookup_response.c_str(), 
-                strlen(lookup_response.c_str())
-            );
-        }
-
-        void process_rexmit_request(sender::ctrl_msg &req) {
-            std::vector<sender::msg_id_t> msg_ids = req.get_rexmit_ids();
-            
+        void retransmit_ids(const std::vector<sikradio::common::msg_id_t>& msg_ids) {
             for (auto id : msg_ids) {
-                optional<sender::data_msg> msg = sent_msgs.atomic_get(id);
-                if (msg.has_value() && msg.value().id == id) {
+                optional<sikradio::common::data_msg> msg = sent_msgs.atomic_get(id);
+                if (msg.has_value() && msg.value().get_id() == id) {
                     // message with desired id was still stored in cache
                     resend_q.atomic_push(msg.value());
                 }
@@ -66,12 +44,12 @@ namespace sender {
         }
 
         void read_input() {
-            sender::msg_t buf(PSIZE);
-            sender::msg_id_t current_msg_id = 0;
+            sikradio::common::msg_t buf(PSIZE);
+            sikradio::common::msg_id_t current_msg_id = 0;
 
             while (!std::cin.eof()) {
                 std::cin.read(reinterpret_cast<char *>(buf.data()), buf.size());  // or `&buf[0]` on older platforms
-                sender::data_msg msg(current_msg_id, buf);
+                sikradio::common::data_msg msg(current_msg_id, buf);
                 current_msg_id += PSIZE;
 
                 send_q.atomic_push(msg);
@@ -80,41 +58,46 @@ namespace sender {
         }
 
         void run_listener(std::shared_future<void> reading_complete) {
-            sender::ctrl_socket sock{CTRL_PORT};
+            sikradio::common::ctrl_socket sock{CTRL_PORT};
 
             while (reading_complete.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
-                optional<sender::ctrl_msg> req = sock.receive();
+                auto req = sock.try_read();
                 if (!req.has_value()) continue;
-
-                if (req.value().is_lookup()) {
-                    process_lookup_request(sock, req.value());
+                
+                sikradio::common::ctrl_msg msg{std::get<0>(req.value())};
+                struct sockaddr_in sender{std::get<1>(req.value())};
+                if (msg.is_lookup()) {
+                    auto reply = sikradio::common::make_reply(NAME, MCAST_ADDR, DATA_PORT);
+                    sock.force_send_to(sender, reply);
                 }
-                if (req.value().is_rexmit()) {
-                    process_rexmit_request(req.value());
+                if (msg.is_rexmit()) {
+                    retransmit_ids(msg.get_rexmit_ids());
                 }
             }
         }
 
         void run_retransmitter(std::shared_future<void> reading_complete) {
-            sender::data_socket sock{MCAST_ADDR, static_cast<in_port_t>(DATA_PORT)};
+            sikradio::sender::data_socket sock{MCAST_ADDR, static_cast<in_port_t>(DATA_PORT)};
 
             while (reading_complete.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
                 // make set not to retransmit same message twice in one batch
-                std::set<sender::data_msg> unique_msgs = resend_q.atomic_get_unique();
+                std::set<sikradio::common::data_msg> unique_msgs = resend_q.atomic_get_unique();
                 for (auto msg : unique_msgs) {
-                    sock.transmit_force(msg.sendable_with_session_id(session_id));
+                    msg.set_session_id(session_id);
+                    sock.transmit_force(msg.sendable());
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(RTIME));
             }
         }
 
         void run_sender(std::shared_future<void> reading_complete) {
-            sender::data_socket sock{MCAST_ADDR, static_cast<in_port_t>(DATA_PORT)};
+            sikradio::sender::data_socket sock{MCAST_ADDR, static_cast<in_port_t>(DATA_PORT)};
 
             while (reading_complete.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
-                optional<sender::data_msg> msg = send_q.atomic_get_and_pop();
+                optional<sikradio::common::data_msg> msg = send_q.atomic_get_and_pop();
                 if (msg.has_value()) {
-                    sock.transmit_force(msg.value().sendable_with_session_id(session_id));
+                    msg.value().set_session_id(session_id);
+                    sock.transmit_force(msg.value().sendable());
                 }
             }
         }
@@ -136,7 +119,7 @@ namespace sender {
                                 NAME(std::move(NAME)),
                                 sent_msgs_cache_size(1 + ((FSIZE - 1) / PSIZE)),
                                 sent_msgs(sent_msgs_cache_size),
-                                session_id(static_cast<msg_id_t>(time(nullptr))) {}
+                                session_id(static_cast<sikradio::common::msg_id_t>(time(nullptr))) {}
 
         void transmit() {
             std::promise<void> reading_complete;

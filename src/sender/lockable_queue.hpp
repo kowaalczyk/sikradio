@@ -6,7 +6,7 @@
 #include <queue>
 #include <atomic>
 #include <set>
-#include "data_msg.hpp"
+#include "../common/data_msg.hpp"
 #include <optional>
 
 
@@ -14,29 +14,29 @@ using std::optional;
 using std::nullopt;
 
 
-namespace sender {
+namespace sikradio::sender {
     class lockable_queue {
     private:
         std::mutex mut{};
-        std::queue<sender::data_msg> q{};
+        std::queue<sikradio::common::data_msg> q{};
 
     public:
         lockable_queue() = default;
 
-        optional<sender::data_msg> atomic_get_and_pop() {
+        optional<sikradio::common::data_msg> atomic_get_and_pop() {
             if (q.empty()) return nullopt;
 
-            std::lock_guard<std::mutex> lock(mut);
+            std::scoped_lock{mut};
 
             auto ret = q.front();
             q.pop();
-            return optional<sender::data_msg>(ret);
+            return optional<sikradio::common::data_msg>(ret);
         }
 
-        std::set<sender::data_msg> atomic_get_unique() {
-            std::set<sender::data_msg> ret;
+        std::set<sikradio::common::data_msg> atomic_get_unique() {
+            std::set<sikradio::common::data_msg> ret;
 
-            std::lock_guard<std::mutex> lock(mut);
+            std::scoped_lock{mut};
 
             while(!q.empty()) {
                 ret.insert(q.front());
@@ -45,8 +45,8 @@ namespace sender {
             return ret;
         }
 
-        void atomic_push(sender::data_msg msg) {
-            std::lock_guard<std::mutex> lock(mut);
+        void atomic_push(sikradio::common::data_msg msg) {
+            std::scoped_lock{mut};
             q.push(std::move(msg));
         }
     };
