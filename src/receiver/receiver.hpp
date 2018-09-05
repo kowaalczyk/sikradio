@@ -115,7 +115,7 @@ namespace sikradio::receiver {
             }
         }
 
-        void run_data_handler() {  // LOCKS: 1 or 2 or 4
+        void run_data_handler() {  // LOCKS: 1-4
             std::optional<sikradio::common::msg_t> read_msg = std::nullopt;
             std::set<sikradio::common::msg_id_t> missed_ids;
             while(true) {
@@ -133,18 +133,18 @@ namespace sikradio::receiver {
                         try {
                             std::tie(read_msg, missed_ids) = buffer.write_try_read_get_rexmit(msg.value());
                         } catch (sikradio::receiver::exceptions::buffer_access_exception &e) {
-                            std::cerr << e.what() << std::endl;
                             read_msg = std::nullopt;
                             missed_ids.clear();
+                            state_manager.mark_dirty();
                         }
                     }
                 } else {
                     try {
                         read_msg = buffer.try_read();
                     } catch (sikradio::receiver::exceptions::buffer_access_exception &e) {
-                        std::cerr << e.what() << std::endl; std::cerr.flush();
                         read_msg = std::nullopt;
                         missed_ids.clear();
+                        state_manager.mark_dirty();
                     }
                 }
                 if (read_msg.has_value()) {
@@ -156,9 +156,7 @@ namespace sikradio::receiver {
             }
         }
 
-        void run_ui_handler() {
-            // TODO: Make sure that when station_set becomes empty the receiver does not crash
-            //       due to omitted update to data_socket and state_manager
+        void run_ui_handler() {  // LOCKS: 1-5
             while (true) {
                 auto msu = ui_manager.get_update();
                 if (!msu.has_value()) continue;
