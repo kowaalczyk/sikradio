@@ -99,9 +99,9 @@ namespace sikradio::receiver {
                 if (msg_sock < 0) throw_safely(client_sockets[0].fd);
 
                 // find available space and register new client socket
-                for (auto& cs : client_sockets) {
-                    if (cs.fd >= 0) continue;
-                    cs.fd = msg_sock;
+                for (int i=1; i<MAX_UI_CLIENT_CONNECTIONS; i++) {
+                    if (client_sockets[i].fd >= 0) continue;
+                    client_sockets[i].fd = msg_sock;
                     try {
                         send_string(msg_sock, iac_do_linemode);
                         send_string(msg_sock, iac_sb_linemode_mode_0_iac_se);
@@ -110,7 +110,7 @@ namespace sikradio::receiver {
                         send_string(msg_sock, active_menu);
                     } catch (sikradio::common::exceptions::socket_exception& e) {
                         // client disconnected
-                        cs.fd = -1;
+                        client_sockets[i].fd = -1;
                     }
                     break;
                 }
@@ -169,13 +169,13 @@ namespace sikradio::receiver {
             auto new_menu = parse_stations(stations, selected);
             if (new_menu == active_menu) return;
 
-            for (auto& cs : client_sockets) {
-                if (cs.fd < 0) continue;
+            for (int i=1; i<MAX_UI_CLIENT_CONNECTIONS; i++) {
+                if (client_sockets[i].fd < 0) continue;
                 try {
-                    send_string(cs.fd, new_menu);
+                    send_string(client_sockets[i].fd, new_menu);
                 } catch (sikradio::common::exceptions::socket_exception& e) {
                     // client disconnected
-                    cs.fd = -1;
+                    client_sockets[i].fd = -1;
                 }
             }
         }
@@ -184,13 +184,13 @@ namespace sikradio::receiver {
             clear_revents();
             check_new_clients();
             std::optional<std::string> str;
-            for (auto& cs : client_sockets) {
-                if (cs.fd < 0) continue;
+            for (int i=1; i<MAX_UI_CLIENT_CONNECTIONS; i++) {
+                if (client_sockets[i].fd < 0) continue;
                 try {
-                    str = read_string(cs.fd);
+                    str = read_string(client_sockets[i].fd);
                 } catch (sikradio::common::exceptions::socket_exception& e) {
                     // client disconnected
-                    cs.fd = -1;
+                    client_sockets[i].fd = -1;
                     continue;
                 }
                 if (str.has_value()) {
