@@ -115,40 +115,40 @@ namespace sikradio::receiver {
             }
         }
 
-        void run_data_receiver() {  // LOCKS: 1 or 2 or 4
+        void run_data_handler() {  // LOCKS: 1 or 2 or 4
             std::optional<sikradio::common::msg_id_t> max_msg_id = std::nullopt;
+            std::optional<sikradio::common::msg_t> read_msg = std::nullopt;
             while(true) {
                 std::scoped_lock{data_mut};
 
                 auto msg = data_socket.try_read();
-                if (!msg.has_value()) continue;
-
-                auto msg_session_id = msg.value().get_session_id();
-                auto ignore_msg = state_manager.register_session_check_ignore(msg_session_id);
-                if (ignore_msg) continue;
-
-                auto msg_id = msg.value().get_id();
-                if (max_msg_id.has_value() && max_msg_id.value() + 1 != msg_id)
-                    rexmit_manager.append_ids(max_msg_id.value() + 1, msg_id);
-
-                buffer.write(msg.value());
-                max_msg_id = std::make_optional(std::max(max_msg_id.value_or(0), msg_id));
-            }
-        }
-
-        void run_data_streamer() {  // LOCKS: 1 or 2
-            std::optional<sikradio::common::msg_t> msg = std::nullopt;
-            while (true) {
-                try {
-                    msg = buffer.try_read();
-                } catch (sikradio::receiver::exceptions::buffer_access_exception &e) {
-                    std::cerr << e.what() << std::endl; std::cerr.flush();
-                    state_manager.mark_dirty();
-                    msg = std::nullopt;
+                if (msg.has_value()) {
+                    auto msg_session_id = msg.value().get_session_id();
+                    auto ignore_msg = state_manager.register_session_check_ignore(msg_session_id);
+                    if (!ignore_msg) {
+                        auto msg_id = msg.value().get_id();
+                        if (max_msg_id.has_value() && max_msg_id.value() + 1 != msg_id)
+                            rexmit_manager.append_ids(max_msg_id.value() + 1, msg_id);
+                        
+                        try {
+                            read_msg = buffer.write_try_read(msg.value());
+                        } catch (sikradio::receiver::exceptions::buffer_access_exception &e) {
+                            std::cerr << e.what() << std::endl; std::cerr.flush();
+                            read_msg = std::nullopt;
+                        }
+                        max_msg_id = std::make_optional(std::max(max_msg_id.value_or(0), msg_id));
+                    }
+                } else {
+                    try {
+                        read_msg = buffer.try_read();
+                    } catch (sikradio::receiver::exceptions::buffer_access_exception &e) {
+                        std::cerr << e.what() << std::endl; std::cerr.flush();
+                        read_msg = std::nullopt;
+                    }
                 }
-                if (!msg.has_value()) continue;
-                std::cout << msg.value().data();
-                std::cout.flush();
+                if (read_msg.has_value()) {
+                    std::cout << read_msg.value().data(); std::cout.flush();
+                }
             }
         }
 
@@ -202,12 +202,10 @@ namespace sikradio::receiver {
             std::thread lookup_sender(&receiver::run_lookup_sender, this);
             std::thread rexmit_sender(&receiver::run_rexmit_sender, this);
             std::thread ui_handler(&receiver::run_ui_handler, this);
-            std::thread data_receiver(&receiver::run_data_receiver, this);
 
-            run_data_streamer();
+            run_data_handler();
 
             // TODO: This might be unnecessary (threads have to be terminated anyway)
-            data_receiver.join();
             ui_handler.join();
             lookup_sender.join();
             rexmit_sender.join();

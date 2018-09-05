@@ -56,13 +56,25 @@ namespace sikradio::receiver {
             msg_vals[msg_pos] = std::make_optional(msg.get_data());
         }
 
+        std::optional<sikradio::common::msg_t> optional_read() {
+            if (state != sikradio::receiver::buffer_state::READABLE)
+                return std::nullopt;
+            if (!msg_vals.front().has_value())
+                throw buffer_access_exception("Buffer is not readable during active session!");
+            auto ret = msg_vals.front();
+            msg_vals.pop_front();
+            msg_ids.pop_front();
+            return ret;
+        }
+
     public:
         buffer() = delete;
         buffer(const buffer& other) = delete;
         buffer(buffer&& other) = delete;
         explicit buffer(size_t max_size) : max_size{max_size} {}
 
-        void write(const sikradio::common::data_msg &msg) {
+        std::optional<sikradio::common::msg_t> 
+        write_try_read(const sikradio::common::data_msg &msg) {
             std::scoped_lock{mut};
 
             // update session and state if necessary
@@ -76,7 +88,8 @@ namespace sikradio::receiver {
                 state = sikradio::receiver::buffer_state::READABLE;
             }
             // save message to buffer
-            if (msg.get_id() % package_size != 0) throw buffer_access_exception("Id=" + std::to_string(msg.get_id()) + "must be divisible by package size=" + std::to_string(package_size));
+            if (msg.get_id() % package_size != 0) 
+                throw buffer_access_exception("Id=" + std::to_string(msg.get_id()) + "must be divisible by package size=" + std::to_string(package_size));
             if (msg_ids.empty() || msg.get_id() > msg_ids.back()) {
                 save_new_message(msg);
             } else if (msg_ids.front() <= msg.get_id() && msg.get_id() <= msg_ids.back()) {
@@ -84,19 +97,13 @@ namespace sikradio::receiver {
             } else {
                 // received message is so old that it will be ignored
             }
+            // try read
+            return optional_read();
         }
 
         std::optional<sikradio::common::msg_t> try_read() {
             std::scoped_lock{mut};
-
-            if (state != sikradio::receiver::buffer_state::READABLE)
-                return std::nullopt;
-            if (!msg_vals.front().has_value())
-                throw buffer_access_exception("Buffer is not readable during active session!");
-            auto ret = msg_vals.front();
-            msg_vals.pop_front();
-            msg_ids.pop_front();
-            return ret;
+            return optional_read();
         }
 
         bool has_space_for(const sikradio::common::msg_id_t id) {
