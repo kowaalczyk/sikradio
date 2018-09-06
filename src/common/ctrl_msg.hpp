@@ -12,14 +12,14 @@
 #include "exceptions.hpp"
 #include "types.hpp"
 
-using ctrl_msg_exception = sikradio::common::exceptions::ctrl_msg_exception;
-
 namespace sikradio::common {
     namespace {
         const std::string lookup_msg_key = "ZERO_SEVEN_COME_IN";
         const std::string reply_msg_key = "BOREWICZ_HERE ";
         const std::string rexmit_msg_key = "LOUDER_PLEASE ";
     }
+
+    using ctrl_msg_exception = exceptions::ctrl_msg_exception;
 
     class ctrl_msg {
     private:
@@ -44,49 +44,44 @@ namespace sikradio::common {
         }
 
         std::vector<sikradio::common::msg_id_t> get_rexmit_ids() const {
-            if (!is_rexmit()) throw ctrl_msg_exception("Trying to read rexmit ids from non-rexmit message");
+            if (!is_rexmit()) 
+                throw ctrl_msg_exception("Trying to read rexmit ids from non-rexmit message");
 
             std::string searchable(msg_data.begin()+(rexmit_msg_key.length()-1), msg_data.end());
-            searchable[0] = ',';  // now all valid numbers will be preceeded by a comma
-
+            searchable[0] = ',';
+            // now all valid numbers will be preceeded by a comma
             std::regex r(",[0-9]+");
             std::vector<sikradio::common::msg_id_t> ids;
-
-            for (std::sregex_iterator i = std::sregex_iterator(
-                        searchable.begin(), 
-                        searchable.end(), 
-                        r);
+            for (auto i = std::sregex_iterator(searchable.begin(), searchable.end(), r);
                     i != std::sregex_iterator();
                     i++) {
                 std::string m_str = (*i).str();
-                std::string num_str(m_str.begin()+1, m_str.end());  // remove comma
-
+                std::string num_str(m_str.begin()+1, m_str.end());  // remove the comma
                 ids.push_back(std::stoull(num_str));
             }
-
             return ids;
         }
 
         std::tuple<std::string, std::string, in_port_t> get_reply_data() const {
-            if (!is_reply()) throw ctrl_msg_exception("Trying to read reply data from a non-reply message");
+            if (!is_reply()) 
+                throw ctrl_msg_exception("Trying to read reply data from a non-reply message");
             
             std::string addr;
             std::string name;
             in_port_t port;
-
+            // putting space in the non-capturing group to separate spaces from content
             std::regex r("(?: )(\\S+)");
-            std::sregex_iterator i = std::sregex_iterator(msg_data.begin(), msg_data.end(), r);
+            auto i = std::sregex_iterator(msg_data.begin(), msg_data.end(), r);
             addr = (*i)[1];  // 1st capturing group in regex
             i++;
             port = static_cast<in_port_t>(std::stoul((*i)[1]));
             i++;
-            name += (*i)[1];
+            name += (*i)[1];  // 1st word in the name
             i++;
             for (; i != std::sregex_iterator(); i++) {
                 name += " ";
-                name += (*i)[1];
+                name += (*i)[1];  // following words in the name
             }
-
             return std::make_tuple(name, addr, port);
         }
 
@@ -103,19 +98,20 @@ namespace sikradio::common {
             const std::string &name, 
             const std::string &mcast_addr, 
             in_port_t data_port) {
-        std::string str = reply_msg_key;
-        str += mcast_addr;
-        str += " ";
-        str += std::to_string(data_port);
-        str += " ";
-        str += name;
-        str += "\n";
-        return ctrl_msg(str);
+        std::ostringstream ss;
+        ss << reply_msg_key;
+        ss << mcast_addr;
+        ss << " ";
+        ss << std::to_string(data_port);
+        ss << " ";
+        ss << name;
+        ss << "\n";
+        return ctrl_msg(ss.str());
     }
 
     ctrl_msg make_rexmit(std::set<sikradio::common::msg_id_t> ids) {
         std::ostringstream ss;
-        for(auto it = ids.begin(); it != ids.end(); it++) {
+        for (auto it = ids.begin(); it != ids.end(); it++) {
             if (it != ids.begin()) ss << ",";
             ss << std::to_string(*it);
         }

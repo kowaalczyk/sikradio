@@ -23,12 +23,11 @@
 #define UDP_DATAGRAM_DATA_LEN_MAX 65535
 #endif
 
-using socket_exception = sikradio::common::exceptions::socket_exception;
-
 namespace sikradio::common {
+    using socket_exception = exceptions::socket_exception;
+
     class ctrl_socket {
     private:
-        // simultaneous reading and writing to same socket is generally possible
         std::mutex read_mut{};
         std::mutex write_mut{};
         sikradio::common::byte_t buffer[UDP_DATAGRAM_DATA_LEN_MAX];
@@ -89,8 +88,7 @@ namespace sikradio::common {
                     IPPROTO_IP,
                     IP_MULTICAST_TTL,
                     &ttl,
-                    sizeof(ttl)
-                );
+                    sizeof(ttl));
                 if (err < 0) close_and_throw();
             }
             if (bind_local) {
@@ -104,7 +102,8 @@ namespace sikradio::common {
             }
         }
 
-        std::optional<std::tuple<sikradio::common::ctrl_msg, struct sockaddr_in>> try_read() {
+        std::optional<std::tuple<sikradio::common::ctrl_msg, struct sockaddr_in>> 
+        try_read() {
             std::scoped_lock{read_mut};
             struct sockaddr_in sender_address{};
             auto rcva_len = (socklen_t) sizeof(sender_address);
@@ -129,7 +128,9 @@ namespace sikradio::common {
             return std::make_optional(std::make_tuple(msg, sender_address));
         }
 
-        void send_to(const struct sockaddr_in& destination, sikradio::common::ctrl_msg msg) {
+        void send_to(
+                const struct sockaddr_in& destination, 
+                sikradio::common::ctrl_msg msg) {
             std::scoped_lock{write_mut};
             size_t data_len = msg.sendable().size();
             ssize_t snd_len = sendto(
@@ -144,7 +145,9 @@ namespace sikradio::common {
                 throw socket_exception("Failed to send entire response");
         }
 
-        void force_send_to(const struct sockaddr_in& destination, sikradio::common::ctrl_msg msg) {
+        void force_send_to(
+                const struct sockaddr_in& destination, 
+                sikradio::common::ctrl_msg msg) {
             while (true) {
                 try {
                     send_to(destination, msg);

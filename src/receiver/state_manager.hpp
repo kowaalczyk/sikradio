@@ -55,7 +55,6 @@ namespace sikradio::receiver {
 
         void mark_dirty() {
             std::scoped_lock{mut};
-
             active_station = std::nullopt;
             dirty = true;
         }

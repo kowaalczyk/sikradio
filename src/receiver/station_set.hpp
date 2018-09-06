@@ -28,13 +28,6 @@ namespace sikradio::receiver {
         std::set<station> stations{};
         std::set<station>::iterator selected_station{stations.end()};
 
-        /**
-         * Removes stations older than MAX_INACTIVE_SECONDS from the internal collection.
-         * If selected station is removed, selects: 
-         * - Next station if the station has one
-         * - First station if it exists
-         * If first station does not exist, internal collection is empty and no station is selected.
-         */
         void remove_old_stations() {
             auto now = std::chrono::system_clock::now();
             for (auto it = stations.begin(); it != stations.end();/*update in body*/) {
@@ -45,6 +38,7 @@ namespace sikradio::receiver {
                     continue;
                 }
                 if (*it == *selected_station) {
+                    // try to change selected station to an active one
                     if (selected_station != stations.end()) 
                         selected_station++;
                     if (selected_station == stations.end()) 

@@ -20,9 +20,9 @@
 #define UDP_DATAGRAM_DATA_LEN_MAX 65535
 #endif
 
-using socket_exception = sikradio::common::exceptions::socket_exception;
-
 namespace sikradio::receiver {
+    using socket_exception = sikradio::common::exceptions::socket_exception;
+
     class data_socket {
     private:
         std::mutex mut{};
@@ -41,7 +41,7 @@ namespace sikradio::receiver {
         data_socket(const data_socket& other) = delete;
         data_socket(data_socket&& other) = delete;
         explicit data_socket(int socket_timeout_in_ms) : 
-                timeout_in_ms{socket_timeout_in_ms} {}
+            timeout_in_ms{socket_timeout_in_ms} {}
 
         void connect(const sikradio::receiver::structures::station new_station) {
             std::scoped_lock{mut};

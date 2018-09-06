@@ -22,11 +22,12 @@
 #include "ui_manager.hpp"
 
 namespace sikradio::receiver {
-
     namespace {
+        // parameters for tuning performance for computers with lower multithreading capabilities
         const auto reset_check_freq = std::chrono::milliseconds(20);
         const auto rexmit_check_freq = std::chrono::milliseconds(10);
         const auto lookup_freq = std::chrono::seconds(5);
+        // timeout applies to all receiver sockets
         const int socket_timeout_in_ms = 500; // has to be smaller than 1000 (1s)  TODO: Split in setsockopt
     }
 
@@ -46,7 +47,7 @@ namespace sikradio::receiver {
         void run_playback_resetter() {  // LOCKS: 1 or 3
             std::optional<sikradio::receiver::structures::station> station;
             bool dirty;
-            while(true) {
+            while (true) {
                 std::tie(station, dirty) = state_manager.check_state();
                 if (dirty) {  // reset playback
                     std::scoped_lock{data_mut};  // stops data_receiver
@@ -62,7 +63,7 @@ namespace sikradio::receiver {
         void run_ctrl_receiver() {  // LOCKS: 0 or 2
             sikradio::common::ctrl_msg msg;
             struct sockaddr_in sender_addr;
-            while(true) {
+            while (true) {
                 auto rcv = ctrl_socket.try_read();
                 if (!rcv.has_value()) continue;
                 
@@ -78,7 +79,7 @@ namespace sikradio::receiver {
         }
 
         void run_lookup_sender() {  // LOCKS: 1
-            while(true) {
+            while (true) {
                 auto msg = sikradio::common::make_lookup();
                 auto da_struct = sikradio::common::make_address(discover_addr, ctrl_port);
                 ctrl_socket.force_send_to(da_struct, msg);
@@ -90,7 +91,7 @@ namespace sikradio::receiver {
         void run_rexmit_sender() {  // LOCKS: 3
             std::set<sikradio::common::msg_id_t> ids_to_rexmit;
             std::set<sikradio::common::msg_id_t> ids_to_forget;
-            while(true) {
+            while (true) {
                 std::this_thread::sleep_for(rexmit_check_freq);
 
                 ids_to_rexmit = rexmit_manager.filter_get_ids(ids_to_forget);
@@ -127,8 +128,8 @@ namespace sikradio::receiver {
 
                 auto msg_session_id = msg.value().get_session_id();
                 auto ignore_msg = state_manager.register_session_check_ignore(msg_session_id);
-
                 if (ignore_msg) continue;
+
                 try {
                     missed_ids = buffer.write_get_missed(msg.value());
                 } catch (sikradio::receiver::exceptions::buffer_access_exception &e) {
@@ -193,8 +194,8 @@ namespace sikradio::receiver {
                  in_port_t ui_port, 
                  size_t bsize, 
                  size_t rtime, 
-                 std::optional<std::string> preferred_station
-        ) : discover_addr{discover_addr},
+                 std::optional<std::string> preferred_station) : 
+            discover_addr{discover_addr},
             ctrl_port{ctrl_port},
             buffer{bsize},
             data_socket{socket_timeout_in_ms},

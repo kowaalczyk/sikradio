@@ -15,7 +15,7 @@
 #endif
 
 namespace sikradio::receiver {
-    using menu_selection_update = sikradio::receiver::structures::menu_selection_update;
+    using menu_selection_update = structures::menu_selection_update;
 
     namespace {
         const int listen_backlog = 5;
@@ -29,12 +29,15 @@ namespace sikradio::receiver {
         const std::string active_station_prefix = "  > ";
         const std::string telnet_endl = "\r\n";
 
-        std::string 
-        parse_stations(std::vector<std::string> stations, std::optional<std::string> selected=std::nullopt) {
+        std::string parse_stations(
+                std::vector<std::string> stations, 
+                std::optional<std::string> selected=std::nullopt) {
             std::ostringstream ret;
+            // header
             ret << hr << telnet_endl;
             ret << title << telnet_endl;
             ret << hr << telnet_endl;
+            // station list
             for (auto it = stations.begin(); it != stations.end(); it++) {
                 if (selected.has_value() && *it == selected.value()) 
                     ret << active_station_prefix;
@@ -91,13 +94,15 @@ namespace sikradio::receiver {
         }
 
         void check_new_clients() {
-            int err = poll(client_sockets, MAX_UI_CLIENT_CONNECTIONS, poll_timeout_in_ms);
+            int err = poll(
+                client_sockets, 
+                MAX_UI_CLIENT_CONNECTIONS, 
+                poll_timeout_in_ms);
             if (err < 0) throw_safely(client_sockets[0].fd);
             // handle new clients
             if (client_sockets[0].revents & POLLIN) {
                 int msg_sock = accept(client_sockets[0].fd, NULL, 0);
                 if (msg_sock < 0) throw_safely(client_sockets[0].fd);
-
                 // find available space and register new client socket
                 for (int i=1; i<MAX_UI_CLIENT_CONNECTIONS; i++) {
                     if (client_sockets[i].fd >= 0) continue;
@@ -119,6 +124,7 @@ namespace sikradio::receiver {
         ui_manager() = delete;
         ui_manager(const ui_manager& other) = delete;
         ui_manager(ui_manager&& other) = delete;
+        
         ui_manager(in_port_t ui_port, int poll_timeout_in_ms) : 
                 ui_port{ui_port},
                 poll_timeout_in_ms{poll_timeout_in_ms} {
@@ -162,13 +168,12 @@ namespace sikradio::receiver {
 
         void send_menu(
                 std::vector<std::string> stations, 
-                std::optional<std::string> selected=std::nullopt) 
-        {
+                std::optional<std::string> selected=std::nullopt) {
             clear_revents();
             check_new_clients();
             auto new_menu = parse_stations(stations, selected);
             if (new_menu == active_menu) return;
-
+            // menu changed and needs to sent to all of the clients
             for (int i=1; i<MAX_UI_CLIENT_CONNECTIONS; i++) {
                 if (client_sockets[i].fd < 0) continue;
                 try {

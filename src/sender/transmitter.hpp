@@ -1,7 +1,6 @@
 #ifndef SIKRADIO_SENDER_TRANSMITTER_HPP
 #define SIKRADIO_SENDER_TRANSMITTER_HPP
 
-
 #include <cstdint>
 #include <iostream>
 #include <future>
@@ -114,22 +113,23 @@ namespace sikradio::sender {
 
     public:
         explicit transmitter(
-            size_t PSIZE,
-            size_t FSIZE,
-            size_t RTIME,
-            std::string MCAST_ADDR,
-            uint16_t DATA_PORT,
-            uint16_t CTRL_PORT,
-            std::string NAME) : PSIZE(PSIZE),
-                                FSIZE(FSIZE),
-                                RTIME(RTIME),
-                                MCAST_ADDR(std::move(MCAST_ADDR)),
-                                DATA_PORT(DATA_PORT),
-                                CTRL_PORT(CTRL_PORT),
-                                NAME(std::move(NAME)),
-                                sent_msgs_cache_size(1 + ((FSIZE - 1) / PSIZE)),
-                                sent_msgs(sent_msgs_cache_size),
-                                session_id(static_cast<sikradio::common::msg_id_t>(time(nullptr))) {}
+                size_t PSIZE,
+                size_t FSIZE,
+                size_t RTIME,
+                std::string MCAST_ADDR,
+                uint16_t DATA_PORT,
+                uint16_t CTRL_PORT,
+                std::string NAME) : 
+            PSIZE(PSIZE),
+            FSIZE(FSIZE),
+            RTIME(RTIME),
+            MCAST_ADDR(std::move(MCAST_ADDR)),
+            DATA_PORT(DATA_PORT),
+            CTRL_PORT(CTRL_PORT),
+            NAME(std::move(NAME)),
+            sent_msgs_cache_size(1 + ((FSIZE - 1) / PSIZE)),
+            sent_msgs(sent_msgs_cache_size),
+            session_id(static_cast<sikradio::common::msg_id_t>(time(nullptr))) {}
 
         void transmit() {
             std::promise<void> reading_complete;
@@ -148,6 +148,5 @@ namespace sikradio::sender {
         }
     };
 }
-
 
 #endif //SIKRADIO_SENDER_TRANSMITTER_HPP

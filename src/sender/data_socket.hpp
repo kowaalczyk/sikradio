@@ -1,6 +1,5 @@
-#ifndef SIKRADIO_SENDER_SK_SOCKET_HPP
-#define SIKRADIO_SENDER_SK_SOCKET_HPP
-
+#ifndef SIKRADIO_SENDER_DATA_SOCKET_HPP
+#define SIKRADIO_SENDER_DATA_SOCKET_HPP
 
 #include <netinet/in.h>
 #include <cstdlib>
@@ -17,24 +16,22 @@
 #define TTL_VALUE 64
 #endif
 
-using socket_exception = sikradio::common::exceptions::socket_exception;
-
-
 namespace sikradio::sender {
+    using socket_exception = sikradio::common::exceptions::socket_exception;
+
     class data_socket {
     private:
         std::string remote_dotted_address;
         in_port_t remote_port;
-
         bool connected{false};
         int sock{-1};
 
         void open_connection() {
             if (connected) return;
-
+            // get file descriptor
             sock = socket(AF_INET, SOCK_DGRAM, 0);
             if (sock < 0) throw socket_exception(strerror(errno));
-
+            // enable broadcast
             int optval = 1;
             int err = setsockopt(
                 sock, 
@@ -43,7 +40,7 @@ namespace sikradio::sender {
                 (void *) &optval, 
                 sizeof optval);
             if (err < 0) throw socket_exception(strerror(errno));
-
+            // set ttl value for broadcast
             optval = TTL_VALUE;
             err = setsockopt(
                 sock, 
@@ -52,17 +49,16 @@ namespace sikradio::sender {
                 (void *) &optval, 
                 sizeof optval);
             if (err < 0) throw socket_exception(strerror(errno));
-
+            // set broadcast address
             struct sockaddr_in remote_address{
                     .sin_family = AF_INET,
                     .sin_port = htons(remote_port)
             };
             err = inet_aton(remote_dotted_address.c_str(), &remote_address.sin_addr);
             if (err == 0) throw socket_exception("Invalid address");
-
+            // connect to the address
             err = connect(sock, (struct sockaddr *) &remote_address, sizeof(remote_address));
             if (err < 0) throw socket_exception(strerror(errno));
-
             connected = true;
         }
 
@@ -93,7 +89,6 @@ namespace sikradio::sender {
 
         void close_connection() {
             if (!connected) return;
-
             close(sock);
         }
 
@@ -103,5 +98,4 @@ namespace sikradio::sender {
     };
 }
 
-
-#endif //SIKRADIO_SENDER_SK_SOCKET_HPP
+#endif //SIKRADIO_SENDER_DATA_SOCKET_HPP

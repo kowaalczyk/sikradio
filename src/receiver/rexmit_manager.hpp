@@ -13,10 +13,13 @@ namespace sikradio::receiver {
         std::chrono::system_clock::time_point scheduled_update;
 
         explicit rexmit_id(sikradio::common::msg_id_t id) : 
-                id{id}, scheduled_update{std::chrono::system_clock::now()} {}
+            id{id}, scheduled_update{std::chrono::system_clock::now()} {}
 
-        rexmit_id(sikradio::common::msg_id_t id, std::chrono::system_clock::time_point scheduled_update) : 
-                id{id}, scheduled_update{scheduled_update} {}
+        rexmit_id(
+                sikradio::common::msg_id_t id, 
+                std::chrono::system_clock::time_point scheduled_update) : 
+            id{id}, 
+            scheduled_update{scheduled_update} {}
 
         bool operator>(const rexmit_id& other) const {return id > other.id;}
         bool operator>=(const rexmit_id& other) const {return id >= other.id;}
@@ -36,7 +39,9 @@ namespace sikradio::receiver {
         rexmit_manager() = delete;
         rexmit_manager(const rexmit_manager& other) = delete;
         rexmit_manager(rexmit_manager&& other) = delete;
-        explicit rexmit_manager(size_t rtime_seconds) : rtime{std::chrono::seconds(rtime_seconds)} {}
+        
+        explicit rexmit_manager(size_t rtime_seconds) : 
+            rtime{std::chrono::seconds(rtime_seconds)} {}
 
         void append_ids(const std::set<sikradio::common::msg_id_t>& new_ids) {
             std::scoped_lock{mut};
@@ -47,7 +52,8 @@ namespace sikradio::receiver {
             }
         }
 
-        std::set<sikradio::common::msg_id_t> filter_get_ids(std::set<sikradio::common::msg_id_t> ids_to_forget) {
+        std::set<sikradio::common::msg_id_t> 
+        filter_get_ids(std::set<sikradio::common::msg_id_t> ids_to_forget) {
             std::scoped_lock{mut};
             // remove ids to forget from rexmit ids
             for (auto it = ids_to_forget.begin(); it != ids_to_forget.end(); it++) {
@@ -73,7 +79,6 @@ namespace sikradio::receiver {
 
         void reset() {
             std::scoped_lock{mut};
-
             rexmit_ids.clear();
             last_update = std::chrono::system_clock::now();
         }

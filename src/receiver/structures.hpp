@@ -36,7 +36,9 @@ namespace sikradio::receiver::structures {
     };
     typedef struct station station;
 
-    station as_station(sikradio::common::ctrl_msg msg, struct sockaddr_in sender_address) {
+    station as_station(
+            sikradio::common::ctrl_msg msg, 
+            struct sockaddr_in sender_address) {
         station s;
         std::string name;
         std::string data_addr;
