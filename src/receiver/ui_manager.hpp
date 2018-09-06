@@ -124,6 +124,9 @@ namespace sikradio::receiver {
         ui_manager(in_port_t ui_port, int poll_timeout_in_ms) : 
                 ui_port{ui_port},
                 poll_timeout_in_ms{poll_timeout_in_ms} {
+            // initialize stations to empty list with header
+            std::vector<std::string> blank;
+            active_menu = parse_stations(blank, blank.end());
             // initialize poll table
             for (int i=0; i < MAX_UI_CLIENT_CONNECTIONS; i++) {
                 client_sockets[i].fd = -1;

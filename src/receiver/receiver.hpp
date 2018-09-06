@@ -161,23 +161,23 @@ namespace sikradio::receiver {
             enqueued_msu = std::nullopt;
             new_selected = std::nullopt;
             while (true) {
-                if (enqueued_msu.has_value()) {
+                // if update is present, change station
+                if (enqueued_msu.has_value())
                     new_selected = station_set.select_get_selected(enqueued_msu.value());
-                } else {
+                else
                     new_selected = station_set.get_selected();
-                }
+                // register current state of station list in ui manager
                 if (new_selected.has_value()) {
-                    bool changed = state_manager.register_address_check_change(new_selected.value());
-                    if (changed) {
-                        auto station_list = station_set.get_station_names();
-                        std::sort(station_list.begin(), station_list.end());
-                        auto selected_name_it = std::find(
-                            station_list.begin(), 
-                            station_list.end(), 
-                            new_selected.value().name);
-                        ui_manager.send_menu(station_list, selected_name_it);
-                    }
+                    state_manager.register_address_check_change(new_selected.value());
+                    auto station_list = station_set.get_station_names();
+                    std::sort(station_list.begin(), station_list.end());
+                    auto selected_name_it = std::find(
+                        station_list.begin(), 
+                        station_list.end(), 
+                        new_selected.value().name);
+                    ui_manager.send_menu(station_list, selected_name_it);
                 }
+                // get update from ui manager
                 enqueued_msu = ui_manager.get_update();
             }
         }
