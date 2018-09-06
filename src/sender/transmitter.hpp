@@ -84,7 +84,12 @@ namespace sikradio::sender {
                 std::set<sikradio::common::data_msg> unique_msgs = resend_q.atomic_get_unique();
                 for (auto msg : unique_msgs) {
                     msg.set_session_id(session_id);
-                    sock.transmit_force(msg.sendable());
+                    try {
+                        auto sndbl_msg = msg.sendable();
+                        sock.transmit_force(sndbl_msg);
+                    } catch (sikradio::common::exceptions::data_msg_exception &e) {
+                        // ignore
+                    }
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(RTIME));
             }
@@ -97,7 +102,12 @@ namespace sikradio::sender {
                 optional<sikradio::common::data_msg> msg = send_q.atomic_get_and_pop();
                 if (msg.has_value()) {
                     msg.value().set_session_id(session_id);
-                    sock.transmit_force(msg.value().sendable());
+                    try {
+                        auto sndbl_msg = msg.value().sendable();
+                        sock.transmit_force(sndbl_msg);
+                    } catch (sikradio::common::exceptions::data_msg_exception &e) {
+                        // ignore
+                    }
                 }
             }
         }

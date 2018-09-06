@@ -10,13 +10,13 @@ else
 	POST_FLAGS = -lpthread -lboost_program_options
 endif
 
+all: sikradio-sender sikradio-receiver
+
 sikradio-sender: src/sender.cpp
 	$(COMPILER) $(PRE_FLAGS) $< $(POST_FLAGS) -o $@
 
 sikradio-receiver: src/receiver.cpp
 	$(COMPILER) $(PRE_FLAGS) $< $(POST_FLAGS) -o $@
-
-all: sikradio-sender sikradio-receiver
 
 test/build/test_main.o: test/test_main.cpp
 	-mkdir test/build > /dev/null 2>&1

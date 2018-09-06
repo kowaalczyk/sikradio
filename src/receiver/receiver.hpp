@@ -117,44 +117,41 @@ namespace sikradio::receiver {
             }
         }
 
-        void run_data_handler() {  // LOCKS: 1-4
-            std::optional<sikradio::common::msg_t> read_msg = std::nullopt;
+        void run_data_receiver() {  // LOCKS: 1-4
             std::set<sikradio::common::msg_id_t> missed_ids;
-            while(true) {
+            while (true) {
                 std::scoped_lock{data_mut};
 
                 auto msg = data_socket.try_read();
-                if (msg.has_value()) {
-                    auto msg_session_id = msg.value().get_session_id();
-                    auto ignore_msg = state_manager.register_session_check_ignore(msg_session_id);
-                    
-                    if (ignore_msg) {
-                        read_msg = std::nullopt;
-                        missed_ids.clear();
-                    } else {
-                        try {
-                            std::tie(read_msg, missed_ids) = buffer.write_try_read_get_rexmit(msg.value());
-                        } catch (sikradio::receiver::exceptions::buffer_access_exception &e) {
-                            read_msg = std::nullopt;
-                            missed_ids.clear();
-                            state_manager.mark_dirty();
-                        }
-                    }
-                } else {
-                    try {
-                        read_msg = buffer.try_read();
-                    } catch (sikradio::receiver::exceptions::buffer_access_exception &e) {
-                        read_msg = std::nullopt;
-                        missed_ids.clear();
-                        state_manager.mark_dirty();
-                    }
+                if (!msg.has_value()) continue;
+
+                auto msg_session_id = msg.value().get_session_id();
+                auto ignore_msg = state_manager.register_session_check_ignore(msg_session_id);
+
+                if (ignore_msg) continue;
+                try {
+                    missed_ids = buffer.write_get_missed(msg.value());
+                } catch (sikradio::receiver::exceptions::buffer_access_exception &e) {
+                    state_manager.mark_dirty();
+                    missed_ids.clear();
                 }
-                if (read_msg.has_value()) {
-                    std::cout << read_msg.value().data();
-                }
-                if (!missed_ids.empty()) {
+                if (!missed_ids.empty())
                     rexmit_manager.append_ids(missed_ids);
+                missed_ids.clear();
+            }
+        }
+
+        void run_data_streamer() {  // LOCKS: 1-2
+            std::optional<sikradio::common::msg_t> read_msg = std::nullopt;
+            while (true) {
+                try {
+                    read_msg = buffer.try_read();
+                } catch (sikradio::receiver::exceptions::buffer_access_exception &e) {
+                    state_manager.mark_dirty();
+                    read_msg = std::nullopt;
                 }
+                if (read_msg.has_value())
+                    std::cout << std::string(read_msg.value().begin(), read_msg.value().end());
             }
         }
 
@@ -212,11 +209,13 @@ namespace sikradio::receiver {
             std::thread ctrl_receiver(&receiver::run_ctrl_receiver, this);
             std::thread lookup_sender(&receiver::run_lookup_sender, this);
             std::thread rexmit_sender(&receiver::run_rexmit_sender, this);
+            std::thread data_receiver(&receiver::run_data_receiver, this);
             std::thread ui_handler(&receiver::run_ui_handler, this);
 
-            run_data_handler();
+            run_data_streamer();
 
             ui_handler.join();
+            data_receiver.join();
             lookup_sender.join();
             rexmit_sender.join();
             ctrl_receiver.join();

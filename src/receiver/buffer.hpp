@@ -62,7 +62,7 @@ namespace sikradio::receiver {
         std::optional<sikradio::common::msg_t> optional_read() {
             if (state != sikradio::receiver::buffer_state::READABLE)
                 return std::nullopt;
-            if (!msg_vals.front().has_value())
+            if (msg_vals.size() == 0 || !msg_vals.front().has_value())
                 throw buffer_access_exception("Buffer is not readable during active session!");
             auto ret = msg_vals.front();
             msg_vals.pop_front();
@@ -76,8 +76,8 @@ namespace sikradio::receiver {
         buffer(buffer&& other) = delete;
         explicit buffer(size_t max_size) : max_size{max_size} {}
 
-        std::pair<std::optional<sikradio::common::msg_t>, std::set<sikradio::common::msg_id_t>>
-        write_try_read_get_rexmit(const sikradio::common::data_msg &msg) {
+        std::set<sikradio::common::msg_id_t>
+        write_get_missed(const sikradio::common::data_msg &msg) {
             std::scoped_lock{mut};
 
             // update session and state if necessary
@@ -111,8 +111,7 @@ namespace sikradio::receiver {
                 }
             }
             max_msg_id = msg.get_id();
-            // try read
-            return std::make_pair(optional_read(), missed_ids);
+            return missed_ids;
         }
 
         std::optional<sikradio::common::msg_t> try_read() {
