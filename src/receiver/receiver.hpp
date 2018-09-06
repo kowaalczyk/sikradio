@@ -27,7 +27,7 @@ namespace sikradio::receiver {
         const auto reset_check_freq = std::chrono::milliseconds(20);
         const auto rexmit_check_freq = std::chrono::milliseconds(10);
         const auto lookup_freq = std::chrono::seconds(5);
-        const int socket_timeout_in_ms = 500; // has to be smaller than 1000
+        const int socket_timeout_in_ms = 500; // has to be smaller than 1000 (1s)  TODO: Split in setsockopt
     }
 
     class receiver {
@@ -72,7 +72,7 @@ namespace sikradio::receiver {
                 auto station = sikradio::receiver::structures::as_station(msg, sender_addr);
                 auto new_selected = station_set.update_get_selected(station);
                 if (!new_selected.has_value()) continue;
-                
+
                 state_manager.register_address_check_change(new_selected.value());
             }
         }
@@ -155,27 +155,28 @@ namespace sikradio::receiver {
             }
         }
 
-        void run_ui_handler() {  // LOCKS: 1-5
+        void run_ui_handler() {  // LOCKS: 4-5
             std::optional<sikradio::receiver::structures::menu_selection_update> enqueued_msu;
             std::optional<sikradio::receiver::structures::station> new_selected;
+            std::vector<std::string> station_names;
             enqueued_msu = std::nullopt;
             new_selected = std::nullopt;
             while (true) {
                 // if update is present, change station
                 if (enqueued_msu.has_value())
-                    new_selected = station_set.select_get_selected(enqueued_msu.value());
+                    new_selected = station_set.select_get_selected(enqueued_msu.value());                
                 else
                     new_selected = station_set.get_selected();
                 // register current state of station list in ui manager
                 if (new_selected.has_value()) {
                     state_manager.register_address_check_change(new_selected.value());
-                    auto station_list = station_set.get_station_names();
-                    std::sort(station_list.begin(), station_list.end());
-                    auto selected_name_it = std::find(
-                        station_list.begin(), 
-                        station_list.end(), 
-                        new_selected.value().name);
-                    ui_manager.send_menu(station_list, selected_name_it);
+                    station_names = station_set.get_station_names();
+                    std::sort(station_names.begin(), station_names.end());
+                    ui_manager.send_menu(station_names, new_selected.value().name);
+                } else {
+                    state_manager.mark_dirty();
+                    station_names.clear();
+                    ui_manager.send_menu(station_names);
                 }
                 // get update from ui manager
                 enqueued_msu = ui_manager.get_update();

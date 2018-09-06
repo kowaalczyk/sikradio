@@ -21,9 +21,7 @@ namespace sikradio::receiver {
         const int listen_backlog = 5;
         const size_t buffer_size = 5;
 
-        const std::string iac_do_linemode = "\255\253\34";
-        const std::string iac_sb_linemode_mode_0_iac_se = "\255\250\34\1\0\255\240";
-        const std::string iac_will_echo = "\255\251\1";
+        const std::string telnet_mode = "\377\375\042\377\373\001";
         const std::string clear_terminal = "\033[2J\033[0;0H";
         const std::string title = "  SIK Radio";
         const std::string hr = "------------------------------------------------------------------------";
@@ -32,14 +30,16 @@ namespace sikradio::receiver {
         const std::string telnet_endl = "\r\n";
 
         std::string 
-        parse_stations(std::vector<std::string> stations, std::vector<std::string>::iterator selected) {
+        parse_stations(std::vector<std::string> stations, std::optional<std::string> selected=std::nullopt) {
             std::ostringstream ret;
             ret << hr << telnet_endl;
             ret << title << telnet_endl;
             ret << hr << telnet_endl;
             for (auto it = stations.begin(); it != stations.end(); it++) {
-                if (it == selected) ret << active_station_prefix;
-                else ret << station_prefix;
+                if (selected.has_value() && *it == selected.value()) 
+                    ret << active_station_prefix;
+                else 
+                    ret << station_prefix;
                 ret << (*it);
                 ret << telnet_endl;
             }
@@ -103,9 +103,7 @@ namespace sikradio::receiver {
                     if (client_sockets[i].fd >= 0) continue;
                     client_sockets[i].fd = msg_sock;
                     try {
-                        send_string(msg_sock, iac_do_linemode);
-                        send_string(msg_sock, iac_sb_linemode_mode_0_iac_se);
-                        send_string(msg_sock, iac_will_echo);
+                        send_string(msg_sock, telnet_mode);
                         send_string(msg_sock, clear_terminal);
                         send_string(msg_sock, active_menu);
                     } catch (sikradio::common::exceptions::socket_exception& e) {
@@ -125,8 +123,7 @@ namespace sikradio::receiver {
                 ui_port{ui_port},
                 poll_timeout_in_ms{poll_timeout_in_ms} {
             // initialize stations to empty list with header
-            std::vector<std::string> blank;
-            active_menu = parse_stations(blank, blank.end());
+            active_menu = parse_stations(std::vector<std::string>());
             // initialize poll table
             for (int i=0; i < MAX_UI_CLIENT_CONNECTIONS; i++) {
                 client_sockets[i].fd = -1;
@@ -165,7 +162,7 @@ namespace sikradio::receiver {
 
         void send_menu(
                 std::vector<std::string> stations, 
-                std::vector<std::string>::iterator selected) 
+                std::optional<std::string> selected=std::nullopt) 
         {
             clear_revents();
             check_new_clients();
@@ -175,6 +172,7 @@ namespace sikradio::receiver {
             for (int i=1; i<MAX_UI_CLIENT_CONNECTIONS; i++) {
                 if (client_sockets[i].fd < 0) continue;
                 try {
+                    send_string(client_sockets[i].fd, clear_terminal);
                     send_string(client_sockets[i].fd, new_menu);
                 } catch (sikradio::common::exceptions::socket_exception& e) {
                     // client disconnected
@@ -190,6 +188,7 @@ namespace sikradio::receiver {
             std::optional<std::string> str;
             for (int i=1; i<MAX_UI_CLIENT_CONNECTIONS; i++) {
                 if (client_sockets[i].fd < 0) continue;
+                if (!(client_sockets[i].revents & POLLIN)) continue;
                 try {
                     str = read_string(client_sockets[i].fd);
                 } catch (sikradio::common::exceptions::socket_exception& e) {
@@ -198,6 +197,7 @@ namespace sikradio::receiver {
                     continue;
                 }
                 if (str.has_value()) {
+                    // return first update received from any client
                     return parse_selection_update(str.value());
                 }
             }

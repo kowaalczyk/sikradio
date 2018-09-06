@@ -76,6 +76,7 @@ namespace sikradio::receiver {
         std::optional<station> 
         update_get_selected(const station &new_station) {
             std::scoped_lock{mut};
+            remove_old_stations();
 
             std::set<station>::iterator new_it;
             size_t erased = stations.erase(new_station);
@@ -88,13 +89,13 @@ namespace sikradio::receiver {
                     && erased == 0)
                 selected_station = new_it;
 
-            remove_old_stations();
             return get_selected_station();
         }
 
         std::optional<station> 
         select_get_selected(const menu_selection_update msu) {
             std::scoped_lock{mut};
+            remove_old_stations();
             
             if (stations.empty()) return get_selected_station();
             if (msu == menu_selection_update::UP) {
@@ -104,17 +105,18 @@ namespace sikradio::receiver {
                 if (selected_station == stations.begin()) selected_station = stations.end();
                 if (selected_station != stations.begin()) selected_station--;
             }
-            remove_old_stations();
             return get_selected_station();
         }
 
         std::optional<station> get_selected() {
             std::scoped_lock{mut};
+            remove_old_stations();
             return get_selected_station();
         }
 
         std::vector<std::string> get_station_names() {
             std::scoped_lock{mut};
+            remove_old_stations();
 
             std::vector<std::string> station_names;
             station_names.reserve(stations.size());
