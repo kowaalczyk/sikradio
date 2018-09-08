@@ -78,4 +78,4 @@ There are also targets for tests: `$ make test-receiver`, `$ make test-sender`, 
 
 ## Third party libraries  
 Boost library is not included in the project and can be downloaded from [its own webpage](https://www.boost.org/).  
-For testing, [Catch 2 test single-header framework]() is included in `test/` directory. It is shared under BSL 1.0 license included in LICENSE file.  
+For testing, [Catch 2 single-header test framework]() is included in `test/` directory. It is shared under BSL 1.0 license included in LICENSE file.  
